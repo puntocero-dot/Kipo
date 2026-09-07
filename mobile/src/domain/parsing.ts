@@ -21,7 +21,7 @@ export interface ParsedDraft {
 }
 
 function stripAccents(s: string) {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 function findFamilyRule(text: string, rules: CategorizationRule[]): CategorizationRule | null {

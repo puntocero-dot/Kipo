@@ -14,7 +14,7 @@ const KEYWORDS = flattenKeywords();
 const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado'];
 
 function stripAccents(str) {
-  return str.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 /**
