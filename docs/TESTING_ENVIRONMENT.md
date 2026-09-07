@@ -32,6 +32,29 @@ todavía. Para eso sigue el Nivel 2.
 app **Expo Go** en un celular real — igual de local, pero en el dispositivo
 donde de verdad vas a usarla.
 
+### Publicar esta versión web en un link real (Vercel)
+
+El repo ya trae [`vercel.json`](../vercel.json) en la raíz configurado para
+este monorepo (la app vive en `mobile/`, no en la raíz). Al conectar el repo
+en [vercel.com](https://vercel.com/new), Vercel lee ese archivo solo y
+compila correctamente sin tocar nada más — el build corre
+`npx expo export -p web` dentro de `mobile/` y publica `mobile/dist`.
+
+Si ya tenías un proyecto de Vercel conectado a este repo desde **antes** de
+que existiera `vercel.json` (por eso el 404 `NOT_FOUND` la primera vez: no
+sabía qué construir), hace falta un redeploy para que recoja el archivo
+nuevo:
+
+1. En el dashboard de Vercel → tu proyecto → **Deployments**.
+2. Al último deploy (o a `main`/la rama conectada) → menú `···` → **Redeploy**.
+3. Si sigue fallando, revisa en **Settings → Build & Development Settings**
+   que "Root Directory" esté en blanco/`.` (raíz del repo) — `vercel.json` ya
+   asume que corre desde ahí, no desde `mobile/`.
+
+Verificado localmente antes de este commit: `cd mobile && npx expo export -p web`
+compila sin errores y el resultado en `mobile/dist` sirve la app idéntica a
+`npm run web` (probado con un servidor estático local).
+
 ## Nivel 2 — Staging compartido (Supabase), para probar la sincronización familiar
 
 1. **Crea un proyecto gratuito en [supabase.com](https://supabase.com)**
