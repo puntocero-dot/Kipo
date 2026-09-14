@@ -1,0 +1,107 @@
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { categoryColor, findCategory } from '../domain/categories';
+import type { Transaction } from '../domain/types';
+import { colors, radius, spacing } from '../theme';
+import { CategoryPickerModal } from './CategoryPickerModal';
+import { Pill } from './ui';
+
+interface Props {
+  transaction: Transaction;
+  onConfirm: (patch: Partial<Transaction>) => void;
+  onDiscard: () => void;
+}
+
+export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props) {
+  const [amountText, setAmountText] = useState(transaction.amount ? String(transaction.amount) : '');
+  const [groupSlug, setGroupSlug] = useState(transaction.groupSlug);
+  const [subSlug, setSubSlug] = useState(transaction.subSlug);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const category = findCategory(groupSlug, subSlug);
+  const color = categoryColor(groupSlug);
+  const parsedAmount = parseFloat(amountText.replace(',', '.'));
+  const canConfirm = !Number.isNaN(parsedAmount) && parsedAmount > 0 && !!groupSlug;
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.rawText}>"{transaction.rawText}"</Text>
+      <Text style={styles.description}>{transaction.description}</Text>
+
+      <View style={styles.row}>
+        <View style={styles.amountBox}>
+          <Text style={styles.label}>Monto</Text>
+          <View style={styles.amountInputRow}>
+            <Text style={styles.dollar}>$</Text>
+            <TextInput
+              style={styles.amountInput}
+              keyboardType="decimal-pad"
+              value={amountText}
+              onChangeText={setAmountText}
+              placeholder="0.00"
+            />
+          </View>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={styles.label}>Categoría</Text>
+          <Pressable onPress={() => setPickerOpen(true)}>
+            <Pill label={category?.label ?? 'Elegir categoría'} color={category ? color : colors.muted} />
+          </Pressable>
+        </View>
+      </View>
+
+      {!groupSlug && <Text style={styles.warning}>No pude adivinar la categoría — elige una para confirmar.</Text>}
+      {Number.isNaN(parsedAmount) && <Text style={styles.warning}>No detecté un monto válido.</Text>}
+
+      <View style={styles.actions}>
+        <Pressable
+          style={[styles.confirmButton, !canConfirm && styles.disabled]}
+          disabled={!canConfirm}
+          onPress={() => onConfirm({ amount: parsedAmount, groupSlug, subSlug })}
+        >
+          <Text style={styles.confirmText}>Guardar</Text>
+        </Pressable>
+        <Pressable style={styles.discardButton} onPress={onDiscard}>
+          <Text style={styles.discardText}>Descartar</Text>
+        </Pressable>
+      </View>
+
+      <CategoryPickerModal
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(option) => {
+          setGroupSlug(option.groupSlug);
+          setSubSlug(option.subSlug);
+          setPickerOpen(false);
+        }}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  rawText: { fontSize: 12, color: colors.muted, fontStyle: 'italic' },
+  description: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  row: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  amountBox: { width: 120 },
+  label: { fontSize: 11, color: colors.muted, marginBottom: 4, textTransform: 'uppercase' },
+  amountInputRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: colors.gridline },
+  dollar: { fontSize: 16, color: colors.textSecondary, marginRight: 2 },
+  amountInput: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, paddingVertical: 4, flex: 1 },
+  warning: { fontSize: 12, color: colors.warning },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  confirmButton: { flex: 1, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 10, alignItems: 'center' },
+  confirmText: { color: '#fff', fontWeight: '700' },
+  discardButton: { paddingVertical: 10, paddingHorizontal: spacing.md, alignItems: 'center' },
+  discardText: { color: colors.critical, fontWeight: '600' },
+  disabled: { opacity: 0.4 },
+});

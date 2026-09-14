@@ -1,0 +1,79 @@
+// Tipos de dominio en camelCase, alineados 1:1 con database/schema.sql
+// (ver docs/DATABASE_SCHEMA.md). `groupSlug`/`subSlug` corresponden a
+// categories.kind/slug una vez migrado a Postgres.
+
+export type TransactionSource = 'chat' | 'voz' | 'sms' | 'manual' | 'recurrente';
+export type TransactionStatus = 'confirmado' | 'pendiente';
+export type Confidence = 'high' | 'medium' | 'low' | 'none';
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  role: 'admin' | 'member' | 'child';
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  type: 'gasto' | 'ingreso';
+  amount: number;
+  currency: string;
+  groupSlug: string | null;
+  subSlug: string | null;
+  merchant: string | null;
+  description: string;
+  rawText: string | null;
+  source: TransactionSource;
+  status: TransactionStatus;
+  occurredAt: string;
+  confidence?: Confidence;
+}
+
+export interface Budget {
+  id: string;
+  name: string;
+  groupSlug: string | null; // null = presupuesto general del mes
+  amountLimit: number;
+  alertThresholdPct: number;
+}
+
+export interface Reminder {
+  id: string;
+  name: string;
+  amount: number | null;
+  recurrence: 'mensual' | 'semanal' | 'anual' | 'unico';
+  nextDueDate: string; // fecha ISO (solo día)
+  notifyDaysBefore: number;
+  isActive: boolean;
+}
+
+export interface SmsSuggestion {
+  id: string;
+  rawSms: string;
+  parsedAmount: number | null;
+  parsedMerchant: string | null;
+  transactionType: 'compra' | 'retiro' | 'pago';
+  confidence: Confidence;
+  status: 'pendiente' | 'confirmado' | 'descartado';
+  receivedAt: string;
+  matchedTransactionId?: string;
+}
+
+export interface CategorizationRule {
+  id: string;
+  keyword: string;
+  groupSlug: string;
+  subSlug: string;
+}
+
+export interface KipoState {
+  familyName: string;
+  inviteCode: string;
+  baseCurrency: string;
+  members: FamilyMember[];
+  transactions: Transaction[];
+  budgets: Budget[];
+  reminders: Reminder[];
+  smsInbox: SmsSuggestion[];
+  categorizationRules: CategorizationRule[];
+}
