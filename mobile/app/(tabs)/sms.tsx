@@ -129,6 +129,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     minHeight: 60,
     textAlignVertical: 'top',
+    outlineWidth: 0,
   },
   smsRow: { paddingVertical: spacing.sm, borderTopWidth: 1, borderColor: colors.gridline, gap: 6 },
   smsRaw: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, fontStyle: 'italic' },

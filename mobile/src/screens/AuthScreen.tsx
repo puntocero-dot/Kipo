@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.45)',
     paddingBottom: 8,
   },
-  input: { flex: 1, fontFamily: fonts.body, fontSize: 14, color: '#fff', paddingVertical: 4 },
+  input: { flex: 1, minWidth: 0, fontFamily: fonts.body, fontSize: 14, color: '#fff', paddingVertical: 4, outlineWidth: 0 },
   error: { color: '#ffe1d6', fontFamily: fonts.bodyMedium, fontSize: 12, backgroundColor: 'rgba(184,69,47,0.4)', padding: spacing.sm, borderRadius: radius.sm },
   info: { color: '#eafff0', fontFamily: fonts.bodyMedium, fontSize: 12, backgroundColor: 'rgba(60,139,74,0.4)', padding: spacing.sm, borderRadius: radius.sm },
   primaryButton: {

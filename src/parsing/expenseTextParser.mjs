@@ -39,7 +39,11 @@ function stripAccents(str) {
 /**
  * Extrae el monto. Prioriza números precedidos de "$" (el caso de todos los
  * ejemplos del usuario); si no hay ninguno, busca un número seguido de una
- * palabra de moneda ("40 quetzales", "20 pesos").
+ * palabra de moneda ("40 quetzales", "20 pesos"); si tampoco hay eso, toma
+ * el último número suelto del texto ("aguinaldo 200", "gasolina 45") — así
+ * de común es que alguien escriba el monto sin signo, y sin este fallback
+ * el campo queda vacío y no hay forma de guardar. El último (no el primero)
+ * porque en el habla natural el monto casi siempre va al final.
  */
 export function extractAmount(text) {
   const dollarMatch = text.match(/\$\s?(\d+(?:[.,]\d{1,2})?)/);
@@ -49,6 +53,11 @@ export function extractAmount(text) {
   const currencyWordMatch = text.match(/(\d+(?:[.,]\d{1,2})?)\s?(dolares|dólares|usd|quetzales|gtq|pesos|mxn|lempiras|hnl|soles|colones)/i);
   if (currencyWordMatch) {
     return { amount: parseFloat(currencyWordMatch[1].replace(',', '.')), matchedText: currencyWordMatch[0] };
+  }
+  const bareMatches = [...text.matchAll(/(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?=\s|$)/g)];
+  if (bareMatches.length > 0) {
+    const last = bareMatches[bareMatches.length - 1];
+    return { amount: parseFloat(last[1].replace(',', '.')), matchedText: last[0] };
   }
   return { amount: null, matchedText: null };
 }
