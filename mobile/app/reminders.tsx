@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Card, EmptyState, PrimaryButton, Screen, SectionTitle } from '../src/components/ui';
 import { daysUntil } from '../src/domain/selectors';
 import { useKipo } from '../src/domain/store';
+import { notify } from '../src/lib/confirm';
 import { colors, radius, spacing } from '../src/theme';
 
 export default function RemindersScreen() {
@@ -16,7 +17,7 @@ export default function RemindersScreen() {
   const submit = () => {
     const days = parseInt(dueInDays, 10);
     if (!name.trim() || Number.isNaN(days) || days < 0) {
-      Alert.alert('Datos incompletos', 'Ingresa un nombre y en cuántos días vence.');
+      notify('Datos incompletos', 'Ingresa un nombre y en cuántos días vence.');
       return;
     }
     const due = new Date();
