@@ -107,3 +107,50 @@ export function groupLabel(groupSlug: string | null): string {
   if (!groupSlug) return 'Sin categorizar';
   return GROUP_LABELS[groupSlug] ?? groupSlug;
 }
+
+const MONTH_NAMES_SHORT = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+// "Hoy" / "Ayer" / "12 sep" (o "12 sep 2025" si no es el año en curso) — para
+// agrupar el historial por día real, no solo mostrar una lista plana.
+export function formatDayLabel(iso: string, reference = new Date()): string {
+  const d = new Date(iso);
+  const startOf = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const diffDays = Math.round((startOf(reference) - startOf(d)) / 86400000);
+  if (diffDays === 0) return 'Hoy';
+  if (diffDays === 1) return 'Ayer';
+  const day = `${d.getDate()} ${MONTH_NAMES_SHORT[d.getMonth()]}`;
+  return d.getFullYear() === reference.getFullYear() ? day : `${day} ${d.getFullYear()}`;
+}
+
+// "3:45 p.m."
+export function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' });
+}
+
+export interface MonthOption {
+  key: string; // "2026-09"
+  label: string; // "Septiembre 2026"
+}
+
+const MONTH_NAMES_LONG = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+export function monthKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Meses con al menos un movimiento, más recientes primero — para poblar el
+// selector de mes del Historial sin inventar meses vacíos.
+export function availableMonths(transactions: Transaction[]): MonthOption[] {
+  const keys = new Set(transactions.map((t) => monthKey(t.occurredAt)));
+  return Array.from(keys)
+    .sort((a, b) => (a < b ? 1 : -1))
+    .map((key) => {
+      const [year, month] = key.split('-').map(Number);
+      return { key, label: `${MONTH_NAMES_LONG[month - 1]} ${year}` };
+    });
+}

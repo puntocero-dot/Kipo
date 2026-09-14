@@ -216,6 +216,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       if (patch.amount !== undefined) dbPatch.amount = patch.amount;
       if (patch.description !== undefined) dbPatch.description = patch.description;
       if (patch.merchant !== undefined) dbPatch.merchant = patch.merchant;
+      if (patch.occurredAt !== undefined) dbPatch.occurred_at = patch.occurredAt;
       if (patch.groupSlug !== undefined || patch.subSlug !== undefined) {
         const tx = state.transactions.find((t) => t.id === id);
         dbPatch.category_id = categoryIdFor(

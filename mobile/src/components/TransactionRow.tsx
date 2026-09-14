@@ -17,17 +17,22 @@ const SOURCE_ICON: Record<Transaction['source'], keyof typeof Ionicons.glyphMap>
 export function TransactionRow({
   transaction,
   memberName,
+  showTime,
   onPress,
   onDelete,
 }: {
   transaction: Transaction;
   memberName?: string;
+  showTime?: boolean;
   onPress?: () => void;
   onDelete?: () => void;
 }) {
   const isIncome = transaction.type === 'ingreso';
   const category = findCategory(transaction.groupSlug, transaction.subSlug);
   const color = isIncome ? colors.good : categoryColor(transaction.groupSlug);
+  const time = showTime
+    ? new Date(transaction.occurredAt).toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' })
+    : null;
 
   // Un Pressable anidado dentro de otro Pressable se comporta mal en
   // react-native-web (el de afuera puede tapar los clics del de adentro) —
@@ -53,9 +58,12 @@ export function TransactionRow({
           {transaction.status === 'pendiente' ? ' · Por confirmar' : ''}
         </Text>
       </View>
-      <Text style={[styles.amount, { color: isIncome ? colors.good : colors.textPrimary }]}>
-        {isIncome ? '+' : '-'}${transaction.amount.toFixed(2)}
-      </Text>
+      <View style={styles.amountCol}>
+        <Text style={[styles.amount, { color: isIncome ? colors.good : colors.textPrimary }]}>
+          {isIncome ? '+' : '-'}${transaction.amount.toFixed(2)}
+        </Text>
+        {time && <Text style={styles.time}>{time}</Text>}
+      </View>
       {onDelete && (
         <Pressable
           onPress={onDelete}
@@ -83,6 +91,8 @@ const styles = StyleSheet.create({
   middle: { flex: 1 },
   title: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.textPrimary },
   subtitle: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, marginTop: 2 },
+  amountCol: { alignItems: 'flex-end' },
   amount: { fontFamily: fonts.displaySemibold, fontSize: 14, fontVariant: ['tabular-nums'] },
+  time: { fontFamily: fonts.body, fontSize: 11, color: colors.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
   deleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { categoryColor, findCategory } from '../domain/categories';
+import { formatDayLabel, formatTime } from '../domain/selectors';
 import type { Transaction } from '../domain/types';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 import { CategoryPickerModal } from './CategoryPickerModal';
 import { Pill } from './ui';
+
+const DAY_OPTIONS = [
+  { label: 'Ahora', offset: 0 },
+  { label: 'Ayer', offset: -1 },
+  { label: 'Antier', offset: -2 },
+];
+
+function dayWithOffset(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString();
+}
 
 interface Props {
   transaction: Transaction;
@@ -17,7 +30,15 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
   const [amountText, setAmountText] = useState(transaction.amount ? String(transaction.amount) : '');
   const [groupSlug, setGroupSlug] = useState(transaction.groupSlug);
   const [subSlug, setSubSlug] = useState(transaction.subSlug);
+  const [occurredAt, setOccurredAt] = useState(transaction.occurredAt);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  const dayOffsetSelected = (offset: number) => {
+    const target = new Date();
+    target.setDate(target.getDate() + offset);
+    const current = new Date(occurredAt);
+    return target.toDateString() === current.toDateString();
+  };
 
   const category = findCategory(groupSlug, subSlug);
   const color = categoryColor(groupSlug);
@@ -59,6 +80,29 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         </View>
       </View>
 
+      <View>
+        <View style={styles.whenRow}>
+          <Text style={styles.label}>¿Cuándo?</Text>
+          <Text style={styles.whenValue}>
+            {formatDayLabel(occurredAt)} · {formatTime(occurredAt)}
+          </Text>
+        </View>
+        <View style={styles.dayChipsRow}>
+          {DAY_OPTIONS.map((opt) => {
+            const selected = dayOffsetSelected(opt.offset);
+            return (
+              <Pressable
+                key={opt.label}
+                onPress={() => setOccurredAt(dayWithOffset(opt.offset))}
+                style={[styles.dayChip, selected && styles.dayChipActive]}
+              >
+                <Text style={[styles.dayChipText, selected && styles.dayChipTextActive]}>{opt.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
       {!isIncome && !groupSlug && <Text style={styles.warning}>No pude adivinar la categoría — elige una para confirmar.</Text>}
       {Number.isNaN(parsedAmount) && <Text style={styles.warning}>No detecté un monto válido.</Text>}
 
@@ -66,7 +110,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         <Pressable
           style={[styles.confirmButton, !canConfirm && styles.disabled]}
           disabled={!canConfirm}
-          onPress={() => onConfirm({ amount: parsedAmount, groupSlug, subSlug })}
+          onPress={() => onConfirm({ amount: parsedAmount, groupSlug, subSlug, occurredAt })}
         >
           <Text style={styles.confirmText}>Guardar</Text>
         </Pressable>
@@ -107,6 +151,13 @@ const styles = StyleSheet.create({
   dollar: { fontFamily: fonts.displaySemibold, fontSize: 16, color: colors.textSecondary, marginRight: 2 },
   amountInput: { fontFamily: fonts.display, fontSize: 17, color: colors.textPrimary, paddingVertical: 4, flex: 1 },
   warning: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.warning },
+  whenRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  whenValue: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.textPrimary },
+  dayChipsRow: { flexDirection: 'row', gap: spacing.xs, marginTop: 6 },
+  dayChip: { paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.page, borderWidth: 1, borderColor: colors.border },
+  dayChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dayChipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },
+  dayChipTextActive: { color: '#fff', fontFamily: fonts.bodyBold },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   confirmButton: {
     flex: 1,
