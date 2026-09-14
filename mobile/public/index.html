@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      /*
+        Bug real en celular: la tab bar de abajo quedaba parcialmente
+        cortada/fuera de pantalla. Causa: lo de arriba fija html/body/#root
+        a height:100% con body{overflow:hidden} (necesario para que
+        <ScrollView> funcione), pero en Chrome Android "100%" se calcula
+        contra el viewport GRANDE (antes de que la barra de direcciones se
+        colapse), más alto que el área visible real — así que el layout
+        completo (con la tab bar al final) terminaba más largo que la
+        pantalla, y como el scroll está deshabilitado, la tab bar quedaba
+        recortada sin forma de verla. `100dvh` (dynamic viewport height, con
+        soporte universal en Chrome/Safari móvil modernos) sí sigue el
+        tamaño visible real; se declara después para que sea solo una
+        mejora progresiva y no rompa navegadores viejos que no la entienden.
+      */
+      html,
+      body,
+      #root {
+        height: 100dvh;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
