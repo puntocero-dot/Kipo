@@ -7,10 +7,15 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSelect: (option: CategoryOption) => void;
+  // 'gasto' por defecto — los usos existentes (presupuestos, corrección de
+  // categoría de un gasto, confirmar un cargo de SMS) son todos de gasto.
+  // ConfirmCaptureCard pasa 'ingreso' cuando la transacción es un ingreso.
+  kind?: 'gasto' | 'ingreso';
 }
 
-export function CategoryPickerModal({ visible, onClose, onSelect }: Props) {
-  const groups = Array.from(new Set(CATEGORY_OPTIONS.map((c) => c.groupSlug)));
+export function CategoryPickerModal({ visible, onClose, onSelect, kind = 'gasto' }: Props) {
+  const kindOptions = CATEGORY_OPTIONS.filter((c) => c.kind === kind);
+  const groups = Array.from(new Set(kindOptions.map((c) => c.groupSlug)));
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -19,7 +24,7 @@ export function CategoryPickerModal({ visible, onClose, onSelect }: Props) {
         <Text style={styles.title}>Elegir categoría</Text>
         <ScrollView style={{ maxHeight: 420 }}>
           {groups.map((groupSlug) => {
-            const options = CATEGORY_OPTIONS.filter((c) => c.groupSlug === groupSlug);
+            const options = kindOptions.filter((c) => c.groupSlug === groupSlug);
             return (
               <View key={groupSlug} style={styles.groupBlock}>
                 <Text style={styles.groupLabel}>{options[0].groupLabel}</Text>

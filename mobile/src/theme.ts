@@ -9,6 +9,11 @@ export const groupColors: Record<string, string> = {
   transporte: '#1baf7a',
   alimentacion_fuera: '#eda100',
   salidas_convivencia: '#e87ba4',
+  // No es un 6to slot categórico nuevo (no re-validado con la dataviz skill) —
+  // reusa el mismo verde semántico de "ingreso" que ya se ve en el resto de
+  // la app (colors.good abajo), así una categoría de ingreso nunca se confunde
+  // visualmente con una de gasto.
+  ingresos: '#3C8B4A',
 };
 
 // Identidad visual: una libreta de cuentas familiar, no un banco frío — papel

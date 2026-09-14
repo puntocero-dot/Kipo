@@ -62,7 +62,7 @@ create table categories (
   parent_id     uuid references categories(id) on delete cascade,
   slug          text not null,
   name          text not null,
-  kind          text not null check (kind in ('fijo', 'necesario', 'transporte', 'alimentacion_fuera', 'salidas_convivencia')),
+  kind          text not null check (kind in ('fijo', 'necesario', 'transporte', 'alimentacion_fuera', 'salidas_convivencia', 'ingreso')),
   icon          text,
   color         text,
   is_system     boolean not null default true,

@@ -10,6 +10,7 @@ export interface CategoryOption {
   subSlug: string;
   label: string;
   color: string;
+  kind: 'gasto' | 'ingreso';
 }
 
 export const CATEGORY_OPTIONS: CategoryOption[] = Object.entries(CATEGORY_GROUPS).flatMap(
@@ -20,6 +21,7 @@ export const CATEGORY_OPTIONS: CategoryOption[] = Object.entries(CATEGORY_GROUPS
       subSlug,
       label: sub.label as string,
       color: groupColors[groupSlug] ?? colors.muted,
+      kind: group.kind as 'gasto' | 'ingreso',
     })),
 );
 

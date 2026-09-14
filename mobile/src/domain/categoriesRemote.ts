@@ -10,6 +10,7 @@ export const KIND_TO_GROUP: Record<string, string> = {
   transporte: 'transporte',
   alimentacion_fuera: 'alimentacion_fuera',
   salidas_convivencia: 'salidas_convivencia',
+  ingreso: 'ingresos',
 };
 
 export const GROUP_TO_KIND: Record<string, string> = Object.fromEntries(

@@ -102,7 +102,9 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
         t.id === id ? { ...t, groupSlug, subSlug, status: 'confirmado' as const } : t,
       );
 
-      if (!tx?.rawText || !category) return { ...prev, transactions };
+      // Las reglas de categorización aprendidas solo aplican a gasto (ver
+      // parsing.ts) — guardar una para un ingreso nunca se volvería a usar.
+      if (!tx?.rawText || !category || tx.type !== 'gasto') return { ...prev, transactions };
 
       const distinctiveWord = tx.rawText
         .split(/\s+/)

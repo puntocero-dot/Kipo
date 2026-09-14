@@ -289,7 +289,9 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       const categoryId = categoryIdFor(catMapsRef.current, groupSlug, subSlug);
       supabase!.from('transactions').update({ category_id: categoryId, status: 'confirmado' }).eq('id', id).then();
 
-      if (tx?.rawText && categoryId) {
+      // Las reglas de categorización aprendidas solo aplican a gasto (ver
+      // parsing.ts) — guardar una para un ingreso nunca se volvería a usar.
+      if (tx?.rawText && categoryId && tx.type === 'gasto') {
         const distinctiveWord = tx.rawText
           .split(/\s+/)
           .map((w) => w.replace(/[^\p{L}]/gu, ''))
