@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { BudgetUsage } from '../domain/selectors';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, spacing } from '../theme';
 
 const STATUS_COLOR: Record<BudgetUsage['status'], string> = {
   ok: colors.good,
@@ -45,11 +45,11 @@ export function BudgetBarRow({ budget }: { budget: BudgetUsage }) {
 const styles = StyleSheet.create({
   row: { gap: spacing.xs },
   header: { flexDirection: 'row', justifyContent: 'space-between' },
-  name: { fontWeight: '600', color: colors.textPrimary, fontSize: 14 },
-  amounts: { color: colors.textSecondary, fontSize: 13, fontVariant: ['tabular-nums'] },
+  name: { fontFamily: fonts.bodySemibold, color: colors.textPrimary, fontSize: 14 },
+  amounts: { fontFamily: fonts.bodyMedium, color: colors.textSecondary, fontSize: 13, fontVariant: ['tabular-nums'] },
   track: { height: 8, borderRadius: radius.pill, backgroundColor: colors.gridline, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radius.pill },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 12, color: colors.muted },
+  statusText: { fontFamily: fonts.body, fontSize: 12, color: colors.muted },
 });

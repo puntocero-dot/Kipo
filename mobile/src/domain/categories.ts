@@ -2,7 +2,7 @@
 // parser en ../../src/parsing) y la UI de la app. Una sola fuente de verdad
 // para las categorías: src/parsing/categoryDictionary.mjs.
 import { CATEGORY_GROUPS } from '@parsing/categoryDictionary.mjs';
-import { groupColors } from '../theme';
+import { colors, groupColors } from '../theme';
 
 export interface CategoryOption {
   groupSlug: string;
@@ -19,7 +19,7 @@ export const CATEGORY_OPTIONS: CategoryOption[] = Object.entries(CATEGORY_GROUPS
       groupLabel: group.label as string,
       subSlug,
       label: sub.label as string,
-      color: groupColors[groupSlug] ?? '#898781',
+      color: groupColors[groupSlug] ?? colors.muted,
     })),
 );
 
@@ -36,6 +36,6 @@ export function findCategory(groupSlug: string | null, subSlug: string | null): 
 }
 
 export function categoryColor(groupSlug: string | null): string {
-  if (!groupSlug) return '#898781';
-  return groupColors[groupSlug] ?? '#898781';
+  if (!groupSlug) return colors.muted;
+  return groupColors[groupSlug] ?? colors.muted;
 }

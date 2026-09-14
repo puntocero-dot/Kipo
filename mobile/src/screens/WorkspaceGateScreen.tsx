@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../domain/authStore';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 // Se muestra cuando ya hay sesión pero todavía no hay un espacio de trabajo
 // activo: primera vez (sin membresías, hay que crear o unirse) o cuando el
@@ -110,10 +110,18 @@ export function WorkspaceGateScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.page },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.page },
-  title: { fontSize: 26, fontWeight: '800', color: colors.textPrimary, textAlign: 'center' },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
-  muted: { fontSize: 12.5, color: colors.muted },
+  title: { fontFamily: fonts.display, fontSize: 26, color: colors.textPrimary, textAlign: 'center' },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadow.card,
+  },
+  sectionTitle: { fontFamily: fonts.displaySemibold, fontSize: 16, color: colors.textPrimary },
+  muted: { fontFamily: fonts.body, fontSize: 12.5, color: colors.muted, lineHeight: 18 },
   workspaceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -122,16 +130,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.gridline,
   },
-  workspaceName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  workspaceRole: { fontSize: 12, color: colors.muted },
+  workspaceName: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.textPrimary },
+  workspaceRole: { fontFamily: fonts.body, fontSize: 12, color: colors.muted },
   tabRow: { flexDirection: 'row', gap: spacing.xs },
-  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: radius.pill, alignItems: 'center', backgroundColor: colors.page },
-  tabBtnActive: { backgroundColor: colors.textPrimary },
-  tabText: { fontSize: 12.5, color: colors.textSecondary, fontWeight: '600' },
-  tabTextActive: { color: colors.card },
-  input: { backgroundColor: colors.page, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 11, fontSize: 14 },
+  tabBtn: { flex: 1, paddingVertical: 9, borderRadius: radius.pill, alignItems: 'center', backgroundColor: colors.page },
+  tabBtnActive: { backgroundColor: colors.primary },
+  tabText: { fontFamily: fonts.bodySemibold, fontSize: 12.5, color: colors.textSecondary },
+  tabTextActive: { color: '#fff' },
+  input: {
+    backgroundColor: colors.page,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 11,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   primaryButton: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center' },
-  primaryButtonText: { color: '#fff', fontWeight: '700' },
-  error: { color: colors.critical, fontSize: 12 },
-  signOut: { textAlign: 'center', color: colors.critical, fontSize: 13, fontWeight: '600', marginBottom: spacing.lg },
+  primaryButtonText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 14 },
+  error: { color: colors.critical, fontFamily: fonts.bodyMedium, fontSize: 12 },
+  signOut: { textAlign: 'center', color: colors.critical, fontFamily: fonts.bodySemibold, fontSize: 13, marginBottom: spacing.lg },
 });

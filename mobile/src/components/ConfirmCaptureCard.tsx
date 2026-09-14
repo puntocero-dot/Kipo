@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { categoryColor, findCategory } from '../domain/categories';
 import type { Transaction } from '../domain/types';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, shadow, spacing } from '../theme';
 import { CategoryPickerModal } from './CategoryPickerModal';
 import { Pill } from './ui';
 
@@ -50,7 +50,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>{isIncome ? 'Tipo' : 'Categoría'}</Text>
           {isIncome ? (
-            <Pill label="💰 Ingreso" color={colors.good} />
+            <Pill label="Ingreso" color={colors.good} />
           ) : (
             <Pressable onPress={() => setPickerOpen(true)}>
               <Pill label={category?.label ?? 'Elegir categoría'} color={category ? color : colors.muted} />
@@ -94,22 +94,34 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primarySoft,
     gap: spacing.sm,
+    ...shadow.card,
   },
-  rawText: { fontSize: 12, color: colors.muted, fontStyle: 'italic' },
-  description: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  rawText: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, fontStyle: 'italic' },
+  description: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.textPrimary },
   row: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   amountBox: { width: 120 },
-  label: { fontSize: 11, color: colors.muted, marginBottom: 4, textTransform: 'uppercase' },
-  amountInputRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: colors.gridline },
-  dollar: { fontSize: 16, color: colors.textSecondary, marginRight: 2 },
-  amountInput: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, paddingVertical: 4, flex: 1 },
-  warning: { fontSize: 12, color: colors.warning },
+  label: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  amountInputRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 2, borderColor: colors.primarySoft },
+  dollar: { fontFamily: fonts.displaySemibold, fontSize: 16, color: colors.textSecondary, marginRight: 2 },
+  amountInput: { fontFamily: fonts.display, fontSize: 17, color: colors.textPrimary, paddingVertical: 4, flex: 1 },
+  warning: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.warning },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  confirmButton: { flex: 1, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 10, alignItems: 'center' },
-  confirmText: { color: '#fff', fontWeight: '700' },
-  discardButton: { paddingVertical: 10, paddingHorizontal: spacing.md, alignItems: 'center' },
-  discardText: { color: colors.critical, fontWeight: '600' },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 11,
+    alignItems: 'center',
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  confirmText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 14 },
+  discardButton: { paddingVertical: 11, paddingHorizontal: spacing.md, alignItems: 'center' },
+  discardText: { color: colors.critical, fontFamily: fonts.bodySemibold, fontSize: 14 },
   disabled: { opacity: 0.4 },
 });

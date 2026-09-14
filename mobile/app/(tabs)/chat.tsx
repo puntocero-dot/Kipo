@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryPickerModal } from '../../src/components/CategoryPickerModal';
@@ -6,7 +7,7 @@ import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { findCategory } from '../../src/domain/categories';
 import { useKipo } from '../../src/domain/store';
 import { notify } from '../../src/lib/confirm';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, fonts, radius, spacing } from '../../src/theme';
 
 const EXAMPLES = [
   'Almuerzo con mi esposa en restaurante $35',
@@ -72,9 +73,12 @@ export default function ChatScreen() {
           const category = findCategory(tx.groupSlug, tx.subSlug);
           return (
             <View key={id} style={styles.confirmedBubble}>
-              <Text style={styles.confirmedText}>
-                ✅ {isIncome ? '+' : ''}${tx.amount.toFixed(2)} · {isIncome ? 'Ingreso' : category?.label ?? 'Sin categorizar'}
-              </Text>
+              <View style={styles.confirmedHeader}>
+                <Ionicons name="checkmark-circle" size={15} color={colors.good} />
+                <Text style={styles.confirmedText}>
+                  {isIncome ? '+' : ''}${tx.amount.toFixed(2)} · {isIncome ? 'Ingreso' : category?.label ?? 'Sin categorizar'}
+                </Text>
+              </View>
               <Text style={styles.confirmedDesc}>{tx.description}</Text>
               {!isIncome && (
                 <Pressable onPress={() => setCorrectingId(id)}>
@@ -96,7 +100,7 @@ export default function ChatScreen() {
           returnKeyType="send"
         />
         <Pressable style={styles.sendButton} onPress={() => send(input)}>
-          <Text style={styles.sendIcon}>➤</Text>
+          <Ionicons name="send" size={17} color="#fff" style={{ marginLeft: -2 }} />
         </Pressable>
       </View>
 
@@ -119,8 +123,8 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.page },
   hint: { padding: spacing.md, gap: spacing.sm },
-  hintTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
-  hintBody: { fontSize: 13, color: colors.muted },
+  hintTitle: { fontFamily: fonts.display, fontSize: 17, color: colors.textPrimary },
+  hintBody: { fontFamily: fonts.body, fontSize: 13, color: colors.muted, lineHeight: 19 },
   examples: { gap: spacing.xs, marginTop: spacing.sm },
   exampleChip: {
     backgroundColor: colors.card,
@@ -129,18 +133,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.sm,
   },
-  exampleText: { color: colors.primary, fontSize: 13 },
+  exampleText: { color: colors.primary, fontFamily: fonts.bodyMedium, fontSize: 13 },
   confirmedBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#e9f2fd',
+    backgroundColor: colors.primarySoft,
     borderRadius: radius.lg,
     padding: spacing.md,
     maxWidth: '85%',
     gap: 4,
   },
-  confirmedText: { fontWeight: '700', color: colors.textPrimary },
-  confirmedDesc: { color: colors.textSecondary, fontSize: 13 },
-  correctLink: { color: colors.primary, fontSize: 12, marginTop: 4 },
+  confirmedHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  confirmedText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.textPrimary },
+  confirmedDesc: { fontFamily: fonts.body, color: colors.textSecondary, fontSize: 13 },
+  correctLink: { color: colors.primary, fontFamily: fonts.bodyMedium, fontSize: 12, marginTop: 4 },
   inputRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -156,6 +161,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
+    fontFamily: fonts.body,
     fontSize: 14,
   },
   sendButton: {
@@ -166,5 +172,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendIcon: { color: '#fff', fontSize: 16 },
 });

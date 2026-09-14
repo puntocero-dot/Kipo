@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors, spacing } from '../theme';
+import { colors, fonts, spacing } from '../theme';
 
 export interface DonutSlice {
   key: string;
@@ -91,11 +91,11 @@ export function DonutChart({ slices, size = 160, strokeWidth = 22, centerLabel, 
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  centerValue: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
-  centerLabel: { fontSize: 11, color: colors.muted },
+  centerValue: { fontFamily: fonts.display, fontSize: 21, color: colors.textPrimary },
+  centerLabel: { fontFamily: fonts.body, fontSize: 11, color: colors.muted },
   legend: { gap: spacing.xs },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   swatch: { width: 10, height: 10, borderRadius: 3 },
-  legendLabel: { flex: 1, fontSize: 13, color: colors.textPrimary },
-  legendValue: { fontSize: 12, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
+  legendLabel: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textPrimary },
+  legendValue: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
 });

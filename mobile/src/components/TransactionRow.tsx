@@ -1,16 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { categoryColor, findCategory } from '../domain/categories';
 import { groupLabel } from '../domain/selectors';
 import type { Transaction } from '../domain/types';
-import { colors, spacing } from '../theme';
+import { colors, fonts, radius, spacing } from '../theme';
 
-const SOURCE_ICON: Record<Transaction['source'], string> = {
-  chat: '💬',
-  voz: '🎙️',
-  sms: '🏦',
-  manual: '✍️',
-  recurrente: '🔁',
+const SOURCE_ICON: Record<Transaction['source'], keyof typeof Ionicons.glyphMap> = {
+  chat: 'chatbubble-outline',
+  voz: 'mic-outline',
+  sms: 'card-outline',
+  manual: 'create-outline',
+  recurrente: 'repeat-outline',
 };
 
 export function TransactionRow({
@@ -39,8 +40,8 @@ export function TransactionRow({
 
   return (
     <Wrapper {...(wrapperProps as any)}>
-      <View style={[styles.iconWrap, { backgroundColor: color + '22' }]}>
-        <Text style={styles.icon}>{isIncome ? '💰' : SOURCE_ICON[transaction.source]}</Text>
+      <View style={[styles.iconWrap, { backgroundColor: color + '1F' }]}>
+        <Ionicons name={isIncome ? 'trending-up-outline' : SOURCE_ICON[transaction.source]} size={17} color={color} />
       </View>
       <View style={styles.middle}>
         <Text style={styles.title} numberOfLines={1}>
@@ -62,7 +63,7 @@ export function TransactionRow({
           accessibilityLabel="Eliminar movimiento"
           testID={`delete-tx-${transaction.id}`}
         >
-          <Text style={styles.deleteIcon}>🗑️</Text>
+          <Ionicons name="trash-outline" size={16} color={colors.muted} />
         </Pressable>
       )}
     </Wrapper>
@@ -70,13 +71,18 @@ export function TransactionRow({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
-  iconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 16 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gridline,
+  },
+  iconWrap: { width: 38, height: 38, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   middle: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  subtitle: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  amount: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  title: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.textPrimary },
+  subtitle: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, marginTop: 2 },
+  amount: { fontFamily: fonts.displaySemibold, fontSize: 14, fontVariant: ['tabular-nums'] },
   deleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  deleteIcon: { fontSize: 15 },
 });

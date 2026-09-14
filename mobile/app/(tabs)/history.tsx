@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
@@ -6,7 +7,7 @@ import { Card, EmptyState, Screen } from '../../src/components/ui';
 import { GROUP_LABELS, GROUP_ORDER, categoryColor } from '../../src/domain/categories';
 import { useKipo } from '../../src/domain/store';
 import { confirmAction } from '../../src/lib/confirm';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, fonts, radius, spacing } from '../../src/theme';
 
 export default function HistoryScreen() {
   const { state, deleteTransaction } = useKipo();
@@ -31,12 +32,16 @@ export default function HistoryScreen() {
   return (
     <TabScreenGuard>
     <Screen>
-      <TextInput
-        style={styles.search}
-        placeholder="Buscar por comercio o descripción..."
-        value={query}
-        onChangeText={setQuery}
-      />
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={16} color={colors.muted} />
+        <TextInput
+          style={styles.search}
+          placeholder="Buscar por comercio o descripción..."
+          placeholderTextColor={colors.muted}
+          value={query}
+          onChangeText={setQuery}
+        />
+      </View>
 
       <View style={styles.chipsRow}>
         <Pressable onPress={() => setGroupFilter(null)} style={[styles.chip, !groupFilter && styles.chipActive]}>
@@ -95,18 +100,20 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  search: {
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.card,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    fontSize: 14,
   },
+  search: { flex: 1, paddingVertical: 11, fontFamily: fonts.body, fontSize: 14, color: colors.textPrimary },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  chip: { paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-  chipActive: { backgroundColor: colors.textPrimary, borderColor: colors.textPrimary },
-  chipText: { fontSize: 12, color: colors.textSecondary },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
+  chip: { paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },
+  chipTextActive: { color: '#fff', fontFamily: fonts.bodyBold },
 });

@@ -1,10 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryPickerModal } from '../../src/components/CategoryPickerModal';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { Card, EmptyState, PrimaryButton, Screen, SecondaryButton, SectionTitle } from '../../src/components/ui';
 import { useKipo } from '../../src/domain/store';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, fonts, radius, spacing } from '../../src/theme';
 
 const SAMPLE_SMS = [
   'Compra aprobada por $28.00 en FARMACIA SAN JOSE el ' + new Date().toLocaleDateString('es-GT'),
@@ -24,7 +25,7 @@ export default function SmsInboxScreen() {
     <TabScreenGuard>
     <Screen>
       <Card>
-        <SectionTitle>🧪 Simular alerta bancaria</SectionTitle>
+        <SectionTitle icon="flask-outline">Simular alerta bancaria</SectionTitle>
         <Text style={styles.note}>
           El lector automático de SMS solo funciona en Android (ver docs/NLP_PARSING.md). Aquí puedes simular una alerta
           para probar el parser en este ambiente de pruebas.
@@ -56,7 +57,7 @@ export default function SmsInboxScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Pendientes de confirmar ({pending.length})</SectionTitle>
+        <SectionTitle icon="time-outline">Pendientes de confirmar ({pending.length})</SectionTitle>
         {pending.length === 0 ? (
           <EmptyState message="No hay sugerencias de SMS pendientes." />
         ) : (
@@ -79,11 +80,18 @@ export default function SmsInboxScreen() {
 
       {resolved.length > 0 && (
         <Card>
-          <SectionTitle>Resueltos recientemente</SectionTitle>
+          <SectionTitle icon="checkmark-done-outline">Resueltos recientemente</SectionTitle>
           {resolved.map((sms) => (
-            <Text key={sms.id} style={styles.resolvedRow}>
-              {sms.status === 'confirmado' ? '✅' : '🗑️'} ${sms.parsedAmount?.toFixed(2) ?? '—'} · {sms.parsedMerchant ?? '—'}
-            </Text>
+            <View key={sms.id} style={styles.resolvedRow}>
+              <Ionicons
+                name={sms.status === 'confirmado' ? 'checkmark-circle' : 'trash-outline'}
+                size={14}
+                color={sms.status === 'confirmado' ? colors.good : colors.muted}
+              />
+              <Text style={styles.resolvedText}>
+                ${sms.parsedAmount?.toFixed(2) ?? '—'} · {sms.parsedMerchant ?? '—'}
+              </Text>
+            </View>
           ))}
         </Card>
       )}
@@ -109,24 +117,26 @@ export default function SmsInboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  note: { fontSize: 12, color: colors.muted },
+  note: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, lineHeight: 18 },
   sampleRow: { gap: spacing.xs },
   sampleChip: { backgroundColor: colors.page, borderRadius: radius.md, padding: spacing.sm },
-  sampleChipText: { fontSize: 12, color: colors.textSecondary },
+  sampleChipText: { fontFamily: fonts.body, fontSize: 12, color: colors.textSecondary },
   input: {
     backgroundColor: colors.page,
     borderRadius: radius.md,
     padding: spacing.sm,
+    fontFamily: fonts.body,
     fontSize: 13,
     minHeight: 60,
     textAlignVertical: 'top',
   },
   smsRow: { paddingVertical: spacing.sm, borderTopWidth: 1, borderColor: colors.gridline, gap: 6 },
-  smsRaw: { fontSize: 12, color: colors.muted, fontStyle: 'italic' },
+  smsRaw: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, fontStyle: 'italic' },
   smsMeta: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  smsAmount: { fontWeight: '800', color: colors.textPrimary },
-  smsMerchant: { color: colors.textSecondary, fontSize: 13, flex: 1 },
-  smsConfidence: { fontSize: 11, color: colors.muted },
+  smsAmount: { fontFamily: fonts.displaySemibold, fontSize: 15, color: colors.textPrimary },
+  smsMerchant: { fontFamily: fonts.bodyMedium, color: colors.textSecondary, fontSize: 13, flex: 1 },
+  smsConfidence: { fontFamily: fonts.body, fontSize: 11, color: colors.muted },
   smsActions: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  resolvedRow: { fontSize: 13, color: colors.textSecondary, paddingVertical: 4 },
+  resolvedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  resolvedText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textSecondary },
 });
