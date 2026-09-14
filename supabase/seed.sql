@@ -45,16 +45,11 @@ values
   ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', (select id from categories where slug = 'farmacia'), 'gasto', 20, null, 'Farmacia', 'Farmacia $20', 'chat', 'confirmado', now() - interval '3 days'),
   ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', (select id from categories where slug = 'supermercado'), 'gasto', 60, null, 'Supermercado', 'Supermercado $60', 'chat', 'confirmado', now());
 
-insert into budgets (family_id, category_id, name, amount_limit, alert_threshold_pct)
+insert into budgets (family_id, category_kind, name, amount_limit, alert_threshold_pct)
 values
   ('11111111-1111-1111-1111-111111111111', null, 'Presupuesto general del mes', 2000, 90),
-  ('11111111-1111-1111-1111-111111111111', null, 'Salidas y Convivencia', 150, 80),
-  ('11111111-1111-1111-1111-111111111111', null, 'Alimentación fuera', 120, 80);
-
--- El presupuesto por categoría se vincula a un `kind` completo (todas las
--- subcategorías de ese grupo) — como budgets.category_id apunta a UNA fila
--- de `categories`, en producción crea una fila "agregadora" por kind o suma
--- varias filas de budget, según prefieras (ver docs/DATABASE_SCHEMA.md).
+  ('11111111-1111-1111-1111-111111111111', 'salidas_convivencia', 'Salidas y Convivencia', 150, 80),
+  ('11111111-1111-1111-1111-111111111111', 'alimentacion_fuera', 'Alimentación fuera', 120, 80);
 
 insert into reminders (family_id, category_id, name, amount, recurrence, next_due_date, notify_days_before)
 values

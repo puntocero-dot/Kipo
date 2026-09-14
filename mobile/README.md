@@ -2,9 +2,15 @@
 
 Implementación funcional del diseño en `../docs/`: captura de gastos en
 lenguaje natural, bandeja de SMS simulados, dashboard, presupuestos y
-recordatorios — corriendo 100% local (sin backend) con datos de prueba
-realistas, lista para conectarse a Supabase cuando quieras compartir data
-entre dispositivos de la familia (ver `../docs/TESTING_ENVIRONMENT.md`).
+recordatorios. Corre en dos modos, según si `.env` tiene un proyecto de
+Supabase configurado:
+
+- **Sin `.env`** (por defecto): 100% local, sin backend, con datos de prueba
+  realistas — el "Nivel 1" de `../docs/TESTING_ENVIRONMENT.md`.
+- **Con `.env`**: login real (Supabase Auth), varias familias/clientes
+  aisladas por RLS, y una misma persona puede tener más de un espacio de
+  trabajo (su familia, y aparte sus finanzas personales, por ejemplo) — ver
+  `../docs/TESTING_ENVIRONMENT.md` § Nivel 2.
 
 ## Correr en modo pruebas (recomendado para visualizar ya)
 
@@ -25,26 +31,48 @@ hasta que conectes el backend de staging.
 Desde la pestaña **Más → Reiniciar datos de prueba** puedes volver a la
 data de ejemplo en cualquier momento.
 
+## Correr contra tu proyecto real de Supabase (multi-cliente / multi-espacio)
+
+```bash
+cp .env.example .env
+# completa EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_ANON_KEY
+npm run web
+```
+
+Con eso, la app pide login/registro real; al entrar por primera vez ofrece
+**crear un espacio nuevo** (tu familia, o un espacio separado para ti solo)
+o **unirte con un código de invitación**. Cada espacio es una fila en
+`families`, completamente aislada de las demás por RLS — así es como se
+vende a más clientes: cada uno crea el suyo, nadie ve los datos de otro.
+Si una persona crea más de un espacio (ej. su familia y, aparte, sus
+finanzas personales), puede cambiar entre ellos desde **Más → Cambiar de
+espacio**.
+
 ## Qué es real y qué es simulado en este ambiente
 
 | Función | Estado |
 |---|---|
 | Parser de lenguaje natural (monto/categoría/contexto social) | **Real** — el mismo código de `../src/parsing` |
-| Guardado de transacciones, presupuestos, recordatorios | **Real** — persistido en AsyncStorage (local) |
+| Guardado de transacciones, presupuestos, recordatorios | **Real** — AsyncStorage en modo local; Postgres/Supabase en modo remoto |
 | Aprendizaje por corrección de categoría | **Real** — genera reglas por familia |
+| Login, múltiples familias/clientes, múltiples espacios por persona | **Real** (en modo remoto) — Supabase Auth + RLS, ver `src/domain/authStore.tsx` |
+| Sincronización entre miembros de la familia | **Real** (en modo remoto) — Supabase Realtime; sin cola offline todavía (sin red, una escritura simplemente falla) |
 | Lectura de SMS bancarios en segundo plano | **Simulado** — solo funciona en una build nativa de Android; aquí hay un botón para "inyectar" un SMS de prueba y ver el mismo parser en acción |
 | Dictado por voz | **Pendiente** — requiere `expo-speech-recognition` en una build nativa, no wireado todavía |
-| Sincronización entre miembros de la familia | **Pendiente** — el esquema y el cliente de Supabase (`src/lib/supabase.ts`) están listos; falta conectar el store a un proyecto real (ver `../docs/TESTING_ENVIRONMENT.md`) |
 | Notificaciones push de recordatorios/presupuestos | **Pendiente** — hoy se muestran como alertas dentro de la app (dashboard); Expo Push + Edge Function es el siguiente paso de producción |
 
 ## Estructura
 
 ```
-app/                  pantallas (expo-router: cada archivo es una ruta)
-src/domain/           estado (store.tsx), tipos, selectores, datos semilla
-src/components/       UI reutilizable (dona, barras de presupuesto, tarjetas)
-src/lib/supabase.ts   cliente de Supabase (inactivo hasta configurar .env)
-../src/parsing/       parser compartido con el resto del repo (no se duplica)
+app/                    pantallas (expo-router: cada archivo es una ruta)
+src/domain/store.tsx    store local/demo (AsyncStorage) — modo sin backend
+src/domain/supabaseStore.tsx  store real (Postgres) — mismo contexto que store.tsx
+src/domain/authStore.tsx      sesión + espacios de trabajo (multi-familia)
+src/domain/kipoContext.ts     el contexto que comparten ambos stores
+src/screens/            AuthScreen (login/registro), WorkspaceGateScreen (crear/unirse/cambiar)
+src/components/         UI reutilizable (dona, barras de presupuesto, tarjetas)
+src/lib/supabase.ts     cliente de Supabase (inactivo hasta configurar .env)
+../src/parsing/         parser compartido con el resto del repo (no se duplica)
 ```
 
 ## Compilar para producción

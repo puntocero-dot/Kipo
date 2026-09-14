@@ -68,12 +68,14 @@ dedicada, y solo entonces se crea/vincula la fila en `transactions`
 registrado el mismo gasto manualmente).
 
 ### `budgets` + `budget_alerts_log`
-Un presupuesto puede ser general (`category_id = null`) o por categoría/grupo
-(ej. "Salidas y comida fuera" sumando `alimentacion_fuera` + `salidas_convivencia`
-se modela como dos filas de presupuesto vinculadas a cada categoría, o como una
-categoría "virtual" agregadora — decisión de producto, el esquema soporta ambas).
-`budget_alerts_log` evita reenviar la misma alerta dos veces en el mismo mes
-(constraint `unique (budget_id, period_start)`).
+Un presupuesto puede ser general (`category_kind = null`, suma todos los
+gastos del mes) o de un grupo completo (`category_kind` = uno de los 5 `kind`
+de `categories` — ej. `salidas_convivencia` suma En Familia + En Pareja +
+Amigos juntos). Se referencia el grupo, no una fila puntual de `categories`,
+porque un presupuesto de "Salidas y Convivencia" tiene que cubrir sus 3
+subcategorías a la vez, no una sola. `budget_alerts_log` evita reenviar la
+misma alerta dos veces en el mismo mes (constraint `unique (budget_id,
+period_start)`).
 
 ### `reminders`
 Pagos fijos recurrentes (alquiler, colegiatura, tarjeta). `next_due_date` se

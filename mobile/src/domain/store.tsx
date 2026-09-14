@@ -1,44 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { findCategory } from './categories';
 import { makeId } from './id';
+import { KipoContext, type KipoContextValue } from './kipoContext';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
 import { buildSeedState } from './seed';
-import type {
-  Budget,
-  CategorizationRule,
-  FamilyMember,
-  KipoState,
-  Reminder,
-  SmsSuggestion,
-  Transaction,
-} from './types';
+import type { Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SmsSuggestion, Transaction } from './types';
 
 const STORAGE_KEY = 'kipo:test-data:v1';
 
-interface KipoContextValue {
-  state: KipoState;
-  loading: boolean;
-  currentUserId: string;
-  setCurrentUserId: (id: string) => void;
-  addTransactionFromText: (text: string, userId?: string) => Transaction;
-  updateTransaction: (id: string, patch: Partial<Transaction>) => void;
-  confirmTransaction: (id: string, patch?: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  correctCategory: (id: string, groupSlug: string, subSlug: string) => void;
-  simulateIncomingSms: (rawSms: string) => SmsSuggestion;
-  confirmSms: (id: string, overrides?: Partial<Transaction>) => void;
-  discardSms: (id: string) => void;
-  addBudget: (budget: Omit<Budget, 'id'>) => void;
-  removeBudget: (id: string) => void;
-  addReminder: (reminder: Omit<Reminder, 'id'>) => void;
-  removeReminder: (id: string) => void;
-  addMember: (member: Omit<FamilyMember, 'id'>) => void;
-  resetSeedData: () => void;
-}
-
-const KipoContext = createContext<KipoContextValue | null>(null);
-
+// Modo local/demo: 100% AsyncStorage, sin backend — es el "Nivel 1" de
+// docs/TESTING_ENVIRONMENT.md. Cuando el proyecto SÍ tiene Supabase
+// configurado, mobile/app/_layout.tsx monta SupabaseKipoProvider en su lugar
+// (mismo <KipoContext>, mismo useKipo() en las pantallas).
 export function KipoProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<KipoState>(() => buildSeedState());
   const [loading, setLoading] = useState(true);
@@ -270,8 +244,4 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
   return <KipoContext.Provider value={value}>{children}</KipoContext.Provider>;
 }
 
-export function useKipo(): KipoContextValue {
-  const ctx = useContext(KipoContext);
-  if (!ctx) throw new Error('useKipo debe usarse dentro de <KipoProvider>');
-  return ctx;
-}
+export { useKipo } from './kipoContext';

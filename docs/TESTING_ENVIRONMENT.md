@@ -55,23 +55,34 @@ Verificado localmente antes de este commit: `cd mobile && npx expo export -p web
 compila sin errores y el resultado en `mobile/dist` sirve la app idéntica a
 `npm run web` (probado con un servidor estático local).
 
-## Nivel 2 — Staging compartido (Supabase), para probar la sincronización familiar
+## Nivel 2 — Backend real (Supabase): login, multi-cliente y multi-espacio
+
+Esto ya está cableado de verdad (no es solo el esquema) — `mobile/` incluye
+login real, aislamiento por cliente y que una misma persona tenga más de un
+espacio de trabajo. Ver `docs/ARCHITECTURE.md` para el porqué, y
+`mobile/README.md` § "Qué es real y qué es simulado" para el detalle exacto
+de qué corre contra Postgres y qué sigue siendo local.
 
 1. **Crea un proyecto gratuito en [supabase.com](https://supabase.com)**
    (plan Free alcanza de sobra para pruebas). Guarda la URL del proyecto y la
    `anon key` (Project Settings → API).
 
-2. **Aplica el esquema.** Con el [Supabase CLI](https://supabase.com/docs/guides/cli):
+2. **Aplica las migraciones.** Con el [Supabase CLI](https://supabase.com/docs/guides/cli)
+   ya logueado y enlazado a tu proyecto (`supabase login`, `supabase init`,
+   `supabase link --project-ref <tu-project-ref>`):
 
    ```bash
-   npx supabase login
-   npx supabase link --project-ref <tu-project-ref>
-   npx supabase db push          # aplica supabase/migrations/*.sql (esquema + categorías del sistema)
+   supabase db push
    ```
 
-   Si no quieres instalar el CLI, puedes pegar el contenido de
-   `database/schema.sql` y luego `database/categorySeed.sql` directamente en
-   el **SQL Editor** del panel de Supabase — es el mismo SQL.
+   Esto aplica, en orden, los 4 archivos de `supabase/migrations/`:
+   `0001_init.sql` (esquema base), `0002_category_seed.sql` (categorías del
+   sistema), `0003_multi_workspace_and_rls.sql` (una persona puede tener más
+   de un espacio + RLS que antes faltaba en `families`/`users`/etc.) y
+   `0004_budget_category_kind.sql` (un presupuesto cubre un grupo completo de
+   categorías, no una sola). Si prefieres no instalar el CLI, puedes pegar
+   cada archivo, en ese mismo orden, en el **SQL Editor** del panel de
+   Supabase — es el mismo SQL.
 
 3. **(Opcional) Carga la familia de prueba "Familia Pérez".** `supabase db push`
    no corre `supabase/seed.sql` contra un proyecto remoto (ese archivo es para
@@ -83,36 +94,41 @@ compila sin errores y el resultado en `mobile/dist` sirve la app idéntica a
    # o, más simple: pega supabase/seed.sql en el SQL Editor de Supabase
    ```
 
+   Como esos usuarios de prueba no tienen `auth_user_id` (no son cuentas
+   reales), no vas a poder "iniciar sesión como ellos" — son solo para
+   mirar los datos en el SQL Editor o probar consultas, no para el flujo de
+   login de la app.
+
 4. **Conecta la app.**
 
    ```bash
    cd mobile
    cp .env.example .env
    # edita .env con tu URL y anon key
+   npm run web
    ```
 
-   `src/lib/supabase.ts` ya crea el cliente cuando esas variables existen —
-   el siguiente paso de desarrollo es hacer que `src/domain/store.tsx`
-   escriba en Supabase además de AsyncStorage (cola de sincronización, ver
-   `docs/ARCHITECTURE.md`). Hoy el cliente está listo pero no conectado al
-   store, para no bloquear las pruebas del Nivel 1 mientras se decide el
-   diseño exacto de la sincronización (resolución de conflictos, qué pasa
-   offline, etc. — ver `docs/ARCHITECTURE.md` § Principios de diseño).
+   Con esas variables presentes, la app ya no muestra "Familia Pérez" fija:
+   pide iniciar sesión o crear cuenta (Supabase Auth), y luego **crear un
+   espacio nuevo** o **unirte con un código de invitación**. Cada espacio es
+   una fila de `families`, aislada de las demás por RLS — así vendes a más
+   de un cliente sin que se vean los datos entre sí. Si la misma persona
+   crea un segundo espacio (ej. sus finanzas personales aparte de su
+   familia), puede alternar entre ellos desde **Más → Cambiar de espacio**.
 
-5. **Prueba con data real de tu propia familia**, no solo con "Familia Pérez":
-   borra las filas de ejemplo (`delete from families;` en cascada borra todo
-   lo asociado) y da de alta tu familia real desde la app una vez esté
-   conectada, o insértala directamente por SQL si prefieres arrancar ya con
-   tus categorías y presupuestos reales.
+5. **Prueba la sincronización real:** abre la app en dos pestañas/dispositivos
+   con la misma cuenta (o invita a alguien más con el código), registra un
+   gasto en una y debería aparecer en la otra sola — es Supabase Realtime,
+   no hay que recargar. Nota: no hay cola offline todavía, así que sin
+   conexión una escritura simplemente falla (queda para el Nivel 3).
 
 ## Nivel 3 — Antes de producción de verdad
 
 Checklist de lo que falta cuando el Nivel 2 ya se sienta bien:
 
-- [ ] Cablear `src/domain/store.tsx` a Supabase (lecturas/escrituras + cola de
-      sync offline-first) en vez de solo AsyncStorage.
-- [ ] Suscripción a Supabase Realtime por `family_id` para que los cambios de
-      un miembro aparezcan en el dispositivo del otro sin recargar.
+- [ ] Cola de sincronización offline-first en `src/domain/supabaseStore.tsx`
+      (hoy, sin red, una escritura falla en vez de encolarse — ver
+      `docs/ARCHITECTURE.md`).
 - [ ] Edge Function `check-budgets` + `send-reminders` (cron diario) y
       Expo Push para las notificaciones — hoy son solo alertas dentro de la app.
 - [ ] Módulo nativo de lectura de SMS en Android (permisos `READ_SMS`/
@@ -122,10 +138,8 @@ Checklist de lo que falta cuando el Nivel 2 ya se sienta bien:
       compartir manualmente, igual que en iOS).
 - [ ] Edge Function `parse-fallback` con Claude para los mensajes de baja
       confianza (prompt ya documentado en `docs/NLP_PARSING.md`).
-- [ ] Auditoría de RLS: confirmar que cada `auth_user_id` de Supabase Auth
-      quede correctamente vinculado a su fila en `users` al registrarse
-      (hoy los usuarios de `supabase/seed.sql` no tienen `auth_user_id`,
-      es solo data de prueba).
+- [ ] Facturación (Stripe u otro) si vas a cobrar por espacio/familia — el
+      aislamiento multi-cliente ya existe, falta la parte de cobro.
 - [ ] `eas build` firmado + revisión de permisos declarados antes de subir a
       Play Store / App Store.
 
@@ -134,5 +148,5 @@ Checklist de lo que falta cuando el Nivel 2 ya se sienta bien:
 | Quiero... | Usa |
 |---|---|
 | Ver la app funcionando ya, hoy | Nivel 1 (`npm run web`) |
-| Que dos personas prueben con los mismos datos | Nivel 2 (Supabase staging) |
+| Vender a varios clientes, o tener yo mismo varios espacios | Nivel 2 (Supabase real) |
 | Publicar en las tiendas | Nivel 3 |
