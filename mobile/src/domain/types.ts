@@ -67,6 +67,12 @@ export interface Reminder {
   nextDueDate: string; // fecha ISO (solo día)
   notifyDaysBefore: number;
   isActive: boolean;
+  groupSlug: string | null; // categoría del gasto que se crea al marcar "Pagado"
+  subSlug: string | null;
+  accountId: string | null; // medio de pago habitual
+  lastPaidAmount: number | null;
+  lastPaidAt: string | null; // fecha/hora ISO del último pago registrado
+  lastPaidTransactionId: string | null; // permite deshacer el último pago
 }
 
 export interface SmsSuggestion {

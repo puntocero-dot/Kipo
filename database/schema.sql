@@ -183,6 +183,7 @@ create table reminders (
   id                uuid primary key default gen_random_uuid(),
   family_id         uuid not null references families(id) on delete cascade,
   category_id       uuid references categories(id) on delete set null,
+  account_id        uuid references accounts(id) on delete set null, -- medio de pago habitual
   name              text not null, -- ej. "Internet", "Colegiatura", "Tarjeta de crédito"
   amount            numeric(12,2),
   recurrence        text not null default 'mensual' check (recurrence in ('mensual', 'semanal', 'anual', 'unico')),
@@ -190,6 +191,11 @@ create table reminders (
   next_due_date     date not null,
   notify_days_before int not null default 3,
   is_active         boolean not null default true,
+  -- "Marcar como pagado": el último pago registrado, para no tener que
+  -- volver a escribir el gasto cada ciclo (ver markReminderPaid).
+  last_paid_amount  numeric(12,2),
+  last_paid_at      timestamptz,
+  last_paid_transaction_id uuid references transactions(id) on delete set null,
   created_at        timestamptz not null default now()
 );
 

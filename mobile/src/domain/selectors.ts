@@ -103,6 +103,27 @@ export function daysUntil(dateIso: string, reference = new Date()): number {
   return Math.round(ms / (1000 * 60 * 60 * 24));
 }
 
+// Mueve la fecha de vencimiento de un recordatorio recurrente un ciclo hacia
+// adelante (al marcarlo pagado) o hacia atrás (al deshacer un pago) — 'unico'
+// no se mueve, ese recordatorio no se repite.
+export function shiftByRecurrence(dateIso: string, recurrence: Reminder['recurrence'], direction: 1 | -1 = 1): string {
+  const d = new Date(dateIso);
+  switch (recurrence) {
+    case 'semanal':
+      d.setDate(d.getDate() + 7 * direction);
+      break;
+    case 'mensual':
+      d.setMonth(d.getMonth() + 1 * direction);
+      break;
+    case 'anual':
+      d.setFullYear(d.getFullYear() + 1 * direction);
+      break;
+    case 'unico':
+      break;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
 export function groupLabel(groupSlug: string | null): string {
   if (!groupSlug) return 'Sin categorizar';
   return GROUP_LABELS[groupSlug] ?? groupSlug;

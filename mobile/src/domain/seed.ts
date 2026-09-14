@@ -178,12 +178,30 @@ function buildSeedBudgets(): Budget[] {
   ];
 }
 
-function buildSeedReminders(): Reminder[] {
+function buildSeedReminders(accounts: Account[]): Reminder[] {
+  const credito = accounts.find((a) => a.type === 'credito')?.id ?? null;
+  const debito = accounts.find((a) => a.type === 'debito')?.id ?? null;
   return [
-    { id: makeId('rem'), name: 'Tarjeta de crédito', amount: 250, recurrence: 'mensual', nextDueDate: daysFromNow(1), notifyDaysBefore: 3, isActive: true },
-    { id: makeId('rem'), name: 'Internet', amount: 45, recurrence: 'mensual', nextDueDate: daysFromNow(3), notifyDaysBefore: 3, isActive: true },
-    { id: makeId('rem'), name: 'Colegiatura', amount: 300, recurrence: 'mensual', nextDueDate: daysFromNow(6), notifyDaysBefore: 5, isActive: true },
-    { id: makeId('rem'), name: 'Seguro del carro', amount: 60, recurrence: 'mensual', nextDueDate: daysFromNow(20), notifyDaysBefore: 5, isActive: true },
+    {
+      id: makeId('rem'), name: 'Tarjeta de crédito', amount: 250, recurrence: 'mensual', nextDueDate: daysFromNow(1),
+      notifyDaysBefore: 3, isActive: true, groupSlug: 'fijos', subSlug: null, accountId: credito,
+      lastPaidAmount: null, lastPaidAt: null, lastPaidTransactionId: null,
+    },
+    {
+      id: makeId('rem'), name: 'Internet', amount: 45, recurrence: 'mensual', nextDueDate: daysFromNow(3),
+      notifyDaysBefore: 3, isActive: true, groupSlug: 'fijos', subSlug: 'servicios', accountId: debito,
+      lastPaidAmount: null, lastPaidAt: null, lastPaidTransactionId: null,
+    },
+    {
+      id: makeId('rem'), name: 'Colegiatura', amount: 300, recurrence: 'mensual', nextDueDate: daysFromNow(6),
+      notifyDaysBefore: 5, isActive: true, groupSlug: 'fijos', subSlug: 'colegiaturas', accountId: debito,
+      lastPaidAmount: null, lastPaidAt: null, lastPaidTransactionId: null,
+    },
+    {
+      id: makeId('rem'), name: 'Seguro del carro', amount: 60, recurrence: 'mensual', nextDueDate: daysFromNow(20),
+      notifyDaysBefore: 5, isActive: true, groupSlug: 'fijos', subSlug: 'seguros', accountId: debito,
+      lastPaidAmount: null, lastPaidAt: null, lastPaidTransactionId: null,
+    },
   ];
 }
 
@@ -235,7 +253,7 @@ export function buildSeedState(): KipoState {
     members,
     transactions: buildSeedTransactions(),
     budgets: buildSeedBudgets(),
-    reminders: buildSeedReminders(),
+    reminders: buildSeedReminders(accounts),
     smsInbox: buildSeedSmsInbox(),
     categorizationRules: [],
     accounts,
