@@ -4,10 +4,11 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DonutChart } from '../../src/components/DonutChart';
+import { MonthlyTrendChart } from '../../src/components/MonthlyTrendChart';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen, SectionTitle } from '../../src/components/ui';
-import { computeMacroDistribution, computeMonthSummary, computeUpcomingReminders, daysUntil } from '../../src/domain/selectors';
+import { computeMacroDistribution, computeMonthlyTrend, computeMonthSummary, computeUpcomingReminders, daysUntil } from '../../src/domain/selectors';
 import { useKipo } from '../../src/domain/store';
 import { colors, fonts, radius, shadow, spacing } from '../../src/theme';
 
@@ -22,6 +23,7 @@ export default function DashboardScreen() {
 
   const summary = computeMonthSummary(state.transactions, now);
   const macro = computeMacroDistribution(state.transactions, now);
+  const trend = computeMonthlyTrend(state.transactions, 6, now);
   const upcoming = computeUpcomingReminders(state.reminders, 7, now);
   const latest = [...state.transactions]
     .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
@@ -63,6 +65,11 @@ export default function DashboardScreen() {
           </View>
           <Text style={styles.trackCaption}>{(usedPct * 100).toFixed(0)}% de tus ingresos ya se gastó este mes</Text>
         </LinearGradient>
+
+        <Card>
+          <SectionTitle icon="trending-up-outline">Evolución mensual</SectionTitle>
+          <MonthlyTrendChart points={trend} />
+        </Card>
 
         <Card>
           <SectionTitle icon="pie-chart-outline">Distribución de gastos</SectionTitle>

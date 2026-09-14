@@ -143,6 +143,32 @@ export function monthKey(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+export interface MonthTrendPoint {
+  key: string; // "2026-09"
+  label: string; // "Sep"
+  income: number;
+  expenses: number;
+}
+
+// Últimos `monthsBack` meses (incluyendo el actual), del más antiguo al más
+// reciente — para el dashboard comparativo. Incluye meses sin movimientos
+// (en 0) para que la evolución se vea completa, no solo los meses con datos.
+export function computeMonthlyTrend(transactions: Transaction[], monthsBack = 6, reference = new Date()): MonthTrendPoint[] {
+  const points: MonthTrendPoint[] = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(reference.getFullYear(), reference.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const monthTx = transactions.filter((t) => monthKey(t.occurredAt) === key);
+    points.push({
+      key,
+      label: MONTH_NAMES_SHORT[d.getMonth()],
+      income: monthTx.filter((t) => t.type === 'ingreso').reduce((s, t) => s + t.amount, 0),
+      expenses: monthTx.filter((t) => t.type === 'gasto').reduce((s, t) => s + t.amount, 0),
+    });
+  }
+  return points;
+}
+
 // Meses con al menos un movimiento, más recientes primero — para poblar el
 // selector de mes del Historial sin inventar meses vacíos.
 export function availableMonths(transactions: Transaction[]): MonthOption[] {
