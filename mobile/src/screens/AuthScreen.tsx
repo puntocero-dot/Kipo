@@ -1,3 +1,5 @@
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../domain/authStore';
@@ -30,47 +32,127 @@ export function AuthScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Kipo</Text>
-        <Text style={styles.subtitle}>{mode === 'sign-in' ? 'Inicia sesión para ver tu familia' : 'Crea tu cuenta'}</Text>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#7a3018', '#c9552b', '#e29255', '#cfc2a8', '#8fa6ad']}
+        locations={[0, 0.28, 0.5, 0.72, 1]}
+        style={StyleSheet.absoluteFill}
+      />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Correo electrónico"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput style={styles.input} placeholder="Contraseña" secureTextEntry value={password} onChangeText={setPassword} />
+      <KeyboardAvoidingView style={styles.center} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <BlurView intensity={40} tint="light" style={styles.card}>
+          <View style={styles.cardOverlay}>
+            <Text style={styles.title}>{mode === 'sign-in' ? 'LOGIN' : 'CREAR CUENTA'}</Text>
+            <Text style={styles.subtitle}>Kipo · Finanzas familiares</Text>
 
-        {error && <Text style={styles.error}>{error}</Text>}
-        {info && <Text style={styles.info}>{info}</Text>}
+            <View style={styles.field}>
+              <Text style={styles.fieldIcon}>👤</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Correo electrónico"
+                placeholderTextColor="rgba(255,255,255,0.75)"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
 
-        <Pressable style={styles.primaryButton} onPress={submit} disabled={busy}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>{mode === 'sign-in' ? 'Entrar' : 'Crear cuenta'}</Text>}
-        </Pressable>
+            <View style={styles.field}>
+              <Text style={styles.fieldIcon}>🔒</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Contraseña"
+                placeholderTextColor="rgba(255,255,255,0.75)"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+            </View>
 
-        <Pressable onPress={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}>
-          <Text style={styles.switchText}>
-            {mode === 'sign-in' ? '¿No tienes cuenta? Crear una' : '¿Ya tienes cuenta? Inicia sesión'}
-          </Text>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+            {error && <Text style={styles.error}>{error}</Text>}
+            {info && <Text style={styles.info}>{info}</Text>}
+
+            <Pressable style={styles.primaryButton} onPress={submit} disabled={busy}>
+              {busy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>{mode === 'sign-in' ? 'INICIAR SESIÓN' : 'CREAR CUENTA'}</Text>
+              )}
+            </Pressable>
+
+            <Pressable onPress={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}>
+              <Text style={styles.switchText}>
+                {mode === 'sign-in' ? (
+                  <>
+                    ¿Nuevo aquí? <Text style={styles.switchLink}>Crear cuenta</Text>
+                  </>
+                ) : (
+                  <>
+                    ¿Ya tienes cuenta? <Text style={styles.switchLink}>Inicia sesión</Text>
+                  </>
+                )}
+              </Text>
+            </Pressable>
+          </View>
+        </BlurView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.page, justifyContent: 'center', padding: spacing.lg },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
-  title: { fontSize: 28, fontWeight: '800', color: colors.textPrimary, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.sm },
-  input: { backgroundColor: colors.page, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 12, fontSize: 14 },
-  error: { color: colors.critical, fontSize: 12 },
-  info: { color: colors.good, fontSize: 12 },
-  primaryButton: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 12, alignItems: 'center', marginTop: spacing.xs },
-  primaryButtonText: { color: '#fff', fontWeight: '700' },
-  switchText: { textAlign: 'center', color: colors.primary, fontSize: 13, marginTop: spacing.sm },
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  card: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: radius.lg + 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  cardOverlay: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    gap: spacing.md,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#fff',
+    textAlign: 'center',
+    letterSpacing: 3,
+    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginBottom: spacing.sm },
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+    paddingBottom: 8,
+  },
+  fieldIcon: { fontSize: 14 },
+  input: { flex: 1, fontSize: 14, color: '#fff', paddingVertical: 4 },
+  error: { color: '#ffe1d6', fontSize: 12, backgroundColor: 'rgba(208,59,59,0.35)', padding: spacing.sm, borderRadius: radius.sm },
+  info: { color: '#eafff0', fontSize: 12, backgroundColor: 'rgba(12,163,12,0.35)', padding: spacing.sm, borderRadius: radius.sm },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  primaryButtonText: { color: '#fff', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
+  switchText: { textAlign: 'center', color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: spacing.xs },
+  switchLink: { color: '#eaf4ff', fontWeight: '700' },
 });
