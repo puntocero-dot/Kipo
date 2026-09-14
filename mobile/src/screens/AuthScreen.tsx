@@ -18,8 +18,8 @@ export function AuthScreen() {
   const submit = async () => {
     setError(null);
     setInfo(null);
-    if (!email.includes('@') || password.length < 6) {
-      setError('Ingresa un correo válido y una contraseña de al menos 6 caracteres.');
+    if (!email.includes('@') || password.length < 8) {
+      setError('Ingresa un correo válido y una contraseña de al menos 8 caracteres.');
       return;
     }
     setBusy(true);

@@ -298,14 +298,57 @@ create policy members_see_peers on users
 create policy users_update_own_row on users
   for update using (auth_user_id = auth.uid());
 
-create policy visible_categories on categories
+-- Sin `with check` propio, Postgres reutiliza el `using` de arriba también
+-- como check — y ese check no restringe qué columnas cambian. Sin este
+-- trigger, cualquiera podría hacer UPDATE sobre su propia fila y ponerse
+-- role='admin', o cambiar su family_id a una familia ajena sin invitación
+-- (ver migración 0006_security_hardening.sql).
+create or replace function prevent_users_privilege_escalation()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.family_id is distinct from old.family_id then
+    raise exception 'No se puede cambiar de familia editando el perfil directamente.';
+  end if;
+  if new.role is distinct from old.role then
+    raise exception 'El rol no se puede cambiar desde el cliente.';
+  end if;
+  if new.auth_user_id is distinct from old.auth_user_id then
+    raise exception 'No se puede reasignar la identidad de esta fila.';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_prevent_users_privilege_escalation
+  before update on users
+  for each row execute function prevent_users_privilege_escalation();
+
+-- Separado en SELECT (amplio, incluye family_id null = catálogo del
+-- sistema) y escritura (solo tus propias filas, nunca family_id null) —
+-- una sola policy sin `for` dejaba que cualquiera escribiera sobre el
+-- catálogo global compartido (ver migración 0006_security_hardening.sql).
+create policy select_categories on categories
   for select using (family_id is null or family_id in (select my_family_ids()));
+create policy insert_own_categories on categories
+  for insert with check (family_id in (select my_family_ids()));
+create policy update_own_categories on categories
+  for update using (family_id in (select my_family_ids()));
+create policy delete_own_categories on categories
+  for delete using (family_id in (select my_family_ids()));
 
 create policy family_isolation_accounts on accounts
   using (family_id in (select my_family_ids()));
 
-create policy family_isolation_categorization_rules on categorization_rules
-  using (family_id is null or family_id in (select my_family_ids()));
+create policy select_categorization_rules on categorization_rules
+  for select using (family_id is null or family_id in (select my_family_ids()));
+create policy insert_own_categorization_rules on categorization_rules
+  for insert with check (family_id in (select my_family_ids()));
+create policy update_own_categorization_rules on categorization_rules
+  for update using (family_id in (select my_family_ids()));
+create policy delete_own_categorization_rules on categorization_rules
+  for delete using (family_id in (select my_family_ids()));
 
 create policy own_devices on devices
   using (user_id in (select my_membership_ids()));
