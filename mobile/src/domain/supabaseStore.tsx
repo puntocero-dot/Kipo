@@ -16,6 +16,7 @@ import { categoryIdFor, fetchCategoryMaps, KIND_TO_GROUP, type CategoryMaps } fr
 import { KipoContext, emptyKipoState, type KipoContextValue } from './kipoContext';
 import { supabase } from '../lib/supabase';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
+import { shiftByRecurrence } from './selectors';
 import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
 
 function dbTransactionToApp(row: any, cats: CategoryMaps): Transaction {
@@ -72,7 +73,8 @@ function dbBudgetToApp(row: any): Budget {
   };
 }
 
-function dbReminderToApp(row: any): Reminder {
+function dbReminderToApp(row: any, cats: CategoryMaps): Reminder {
+  const cat = row.category_id ? cats.idToSlug.get(row.category_id) : undefined;
   return {
     id: row.id,
     name: row.name,
@@ -81,6 +83,12 @@ function dbReminderToApp(row: any): Reminder {
     nextDueDate: row.next_due_date,
     notifyDaysBefore: row.notify_days_before,
     isActive: row.is_active,
+    groupSlug: cat?.groupSlug ?? null,
+    subSlug: cat?.subSlug ?? null,
+    accountId: row.account_id,
+    lastPaidAmount: row.last_paid_amount !== null && row.last_paid_amount !== undefined ? Number(row.last_paid_amount) : null,
+    lastPaidAt: row.last_paid_at ?? null,
+    lastPaidTransactionId: row.last_paid_transaction_id ?? null,
   };
 }
 
@@ -128,7 +136,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     const members: FamilyMember[] = (membersRes.data ?? []).map((r: any) => ({ id: r.id, name: r.display_name, role: r.role }));
     const transactions = (txRes.data ?? []).map((r: any) => dbTransactionToApp(r, cats));
     const budgets = (budgetsRes.data ?? []).map(dbBudgetToApp);
-    const reminders = (remindersRes.data ?? []).map(dbReminderToApp);
+    const reminders = (remindersRes.data ?? []).map((r: any) => dbReminderToApp(r, cats));
     const smsInbox = (smsRes.data ?? []).map(dbSmsToApp);
     const categorizationRules: CategorizationRule[] = (rulesRes.data ?? [])
       .map((r: any) => {
@@ -448,10 +456,12 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             next_due_date: reminder.nextDueDate,
             notify_days_before: reminder.notifyDaysBefore,
             is_active: reminder.isActive,
+            category_id: categoryIdFor(catMapsRef.current, reminder.groupSlug, reminder.subSlug),
+            account_id: reminder.accountId,
           })
           .select()
           .single();
-        if (data) setState((prev) => ({ ...prev, reminders: [...prev.reminders, dbReminderToApp(data)] }));
+        if (data) setState((prev) => ({ ...prev, reminders: [...prev.reminders, dbReminderToApp(data, catMapsRef.current)] }));
       })();
     },
     [familyId],
@@ -461,6 +471,103 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     setState((prev) => ({ ...prev, reminders: prev.reminders.filter((r) => r.id !== id) }));
     supabase!.from('reminders').delete().eq('id', id).then();
   }, []);
+
+  // Marca el ciclo actual de un recordatorio recurrente como pagado: crea el
+  // gasto en `transactions` y avanza `next_due_date` al siguiente ciclo, así
+  // el usuario nunca tiene que volver a "escribirlo" en el chat cada mes.
+  const markReminderPaid = useCallback(
+    (id: string, amount: number, accountId?: string | null) => {
+      const reminder = state.reminders.find((r) => r.id === id);
+      if (!reminder) return;
+      const now = new Date().toISOString();
+      const txId = Crypto.randomUUID();
+      const resolvedAccountId = accountId ?? reminder.accountId ?? null;
+      const nextDueDate = shiftByRecurrence(reminder.nextDueDate, reminder.recurrence, 1);
+      const isActive = reminder.recurrence === 'unico' ? false : reminder.isActive;
+
+      setState((prev) => ({
+        ...prev,
+        transactions: [
+          {
+            id: txId,
+            userId: membershipId,
+            type: 'gasto',
+            amount,
+            currency: prev.baseCurrency,
+            groupSlug: reminder.groupSlug ?? 'fijos',
+            subSlug: reminder.subSlug,
+            merchant: null,
+            description: reminder.name,
+            rawText: null,
+            source: 'recurrente',
+            status: 'confirmado',
+            occurredAt: now,
+            accountId: resolvedAccountId,
+          },
+          ...prev.transactions,
+        ],
+        reminders: prev.reminders.map((r) =>
+          r.id === id ? { ...r, nextDueDate, isActive, lastPaidAmount: amount, lastPaidAt: now, lastPaidTransactionId: txId } : r,
+        ),
+      }));
+
+      (async () => {
+        await supabase!.from('transactions').insert({
+          id: txId,
+          family_id: familyId,
+          user_id: membershipId,
+          type: 'gasto',
+          amount,
+          currency: state.baseCurrency,
+          category_id: categoryIdFor(catMapsRef.current, reminder.groupSlug ?? 'fijos', reminder.subSlug),
+          account_id: resolvedAccountId,
+          description: reminder.name,
+          source: 'recurrente',
+          status: 'confirmado',
+          occurred_at: now,
+        });
+        await supabase!
+          .from('reminders')
+          .update({
+            next_due_date: nextDueDate,
+            is_active: isActive,
+            last_paid_amount: amount,
+            last_paid_at: now,
+            last_paid_transaction_id: txId,
+          })
+          .eq('id', id);
+      })();
+    },
+    [state.reminders, state.baseCurrency, membershipId, familyId],
+  );
+
+  const undoReminderPayment = useCallback(
+    (id: string) => {
+      const reminder = state.reminders.find((r) => r.id === id);
+      if (!reminder?.lastPaidTransactionId) return;
+      const txId = reminder.lastPaidTransactionId;
+      const previousDueDate = shiftByRecurrence(reminder.nextDueDate, reminder.recurrence, -1);
+
+      setState((prev) => ({
+        ...prev,
+        transactions: prev.transactions.filter((t) => t.id !== txId),
+        reminders: prev.reminders.map((r) =>
+          r.id === id
+            ? { ...r, nextDueDate: previousDueDate, isActive: true, lastPaidAmount: null, lastPaidAt: null, lastPaidTransactionId: null }
+            : r,
+        ),
+      }));
+
+      (async () => {
+        await supabase!.from('transactions').delete().eq('id', txId);
+        await supabase!
+          .from('reminders')
+          .update({ next_due_date: previousDueDate, is_active: true, last_paid_amount: null, last_paid_at: null, last_paid_transaction_id: null })
+          .eq('id', id);
+      })();
+    },
+    [state.reminders],
+  );
 
   // En modo remoto un "miembro" nuevo se agrega compartiendo el código de
   // invitación (families.invite_code), no insertándolo directo — RLS
@@ -562,6 +669,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       removeBudget,
       addReminder,
       removeReminder,
+      markReminderPaid,
+      undoReminderPayment,
       addMember,
       addAccount,
       removeAccount,
@@ -587,6 +696,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       removeBudget,
       addReminder,
       removeReminder,
+      markReminderPaid,
+      undoReminderPayment,
       addMember,
       addAccount,
       removeAccount,

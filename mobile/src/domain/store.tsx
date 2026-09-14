@@ -4,6 +4,7 @@ import { findCategory } from './categories';
 import { makeId } from './id';
 import { KipoContext, type KipoContextValue } from './kipoContext';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
+import { shiftByRecurrence } from './selectors';
 import { buildSeedState } from './seed';
 import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
 
@@ -192,6 +193,68 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, reminders: prev.reminders.filter((r) => r.id !== id) }));
   }, []);
 
+  const markReminderPaid = useCallback(
+    (id: string, amount: number, accountId?: string | null) => {
+      setState((prev) => {
+        const reminder = prev.reminders.find((r) => r.id === id);
+        if (!reminder) return prev;
+        const now = new Date().toISOString();
+        const txId = makeId('tx');
+        const transaction: Transaction = {
+          id: txId,
+          userId: currentUserId,
+          type: 'gasto',
+          amount,
+          currency: prev.baseCurrency,
+          groupSlug: reminder.groupSlug ?? 'fijos',
+          subSlug: reminder.subSlug,
+          merchant: null,
+          description: reminder.name,
+          rawText: null,
+          source: 'recurrente',
+          status: 'confirmado',
+          occurredAt: now,
+          accountId: accountId ?? reminder.accountId ?? null,
+        };
+        const reminders = prev.reminders.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                nextDueDate: shiftByRecurrence(r.nextDueDate, r.recurrence, 1),
+                isActive: r.recurrence === 'unico' ? false : r.isActive,
+                lastPaidAmount: amount,
+                lastPaidAt: now,
+                lastPaidTransactionId: txId,
+              }
+            : r,
+        );
+        return { ...prev, transactions: [transaction, ...prev.transactions], reminders };
+      });
+    },
+    [currentUserId],
+  );
+
+  const undoReminderPayment = useCallback((id: string) => {
+    setState((prev) => {
+      const reminder = prev.reminders.find((r) => r.id === id);
+      if (!reminder?.lastPaidTransactionId) return prev;
+      const transactions = prev.transactions.filter((t) => t.id !== reminder.lastPaidTransactionId);
+      const reminders = prev.reminders.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              nextDueDate: shiftByRecurrence(r.nextDueDate, r.recurrence, -1),
+              isActive: true,
+              lastPaidAmount: null,
+              lastPaidAt: null,
+              lastPaidTransactionId: null,
+            }
+          : r,
+      );
+      return { ...prev, transactions, reminders };
+    });
+  }, []);
+
   const addMember = useCallback((member: Omit<FamilyMember, 'id'>) => {
     setState((prev) => ({ ...prev, members: [...prev.members, { ...member, id: makeId('user') }] }));
   }, []);
@@ -245,6 +308,8 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       removeBudget,
       addReminder,
       removeReminder,
+      markReminderPaid,
+      undoReminderPayment,
       addMember,
       addAccount,
       removeAccount,
@@ -269,6 +334,8 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       removeBudget,
       addReminder,
       removeReminder,
+      markReminderPaid,
+      undoReminderPayment,
       addMember,
       addAccount,
       removeAccount,

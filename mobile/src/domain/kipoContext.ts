@@ -24,6 +24,13 @@ export interface KipoContextValue {
   removeBudget: (id: string) => void;
   addReminder: (reminder: Omit<Reminder, 'id'>) => void;
   removeReminder: (id: string) => void;
+  // Marca el ciclo actual de un recordatorio recurrente como pagado: crea el
+  // gasto correspondiente y avanza nextDueDate al siguiente ciclo — así el
+  // usuario nunca tiene que volver a "escribirlo" en el chat cada mes.
+  markReminderPaid: (id: string, amount: number, accountId?: string | null) => void;
+  // Revierte el último pago marcado (borra el gasto creado y regresa
+  // nextDueDate al ciclo anterior) — por si se tocó por error.
+  undoReminderPayment: (id: string) => void;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
   addAccount: (account: Omit<Account, 'id'>) => void;
   removeAccount: (id: string) => void;
