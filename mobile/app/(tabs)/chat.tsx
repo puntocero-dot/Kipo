@@ -157,12 +157,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: colors.page,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     fontFamily: fonts.body,
     fontSize: 14,
+    outlineWidth: 0,
   },
   sendButton: {
     width: 42,

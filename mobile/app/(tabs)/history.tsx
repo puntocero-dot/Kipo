@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  search: { flex: 1, paddingVertical: 11, fontFamily: fonts.body, fontSize: 14, color: colors.textPrimary },
+  search: { flex: 1, minWidth: 0, paddingVertical: 11, fontFamily: fonts.body, fontSize: 14, color: colors.textPrimary, outlineWidth: 0 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   chip: { paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },

@@ -146,6 +146,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     borderWidth: 1,
     borderColor: colors.border,
+    outlineWidth: 0,
   },
   primaryButton: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center' },
   primaryButtonText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 14 },
