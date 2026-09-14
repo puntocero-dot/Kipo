@@ -13,6 +13,7 @@ interface Props {
 }
 
 export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props) {
+  const isIncome = transaction.type === 'ingreso';
   const [amountText, setAmountText] = useState(transaction.amount ? String(transaction.amount) : '');
   const [groupSlug, setGroupSlug] = useState(transaction.groupSlug);
   const [subSlug, setSubSlug] = useState(transaction.subSlug);
@@ -21,7 +22,9 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
   const category = findCategory(groupSlug, subSlug);
   const color = categoryColor(groupSlug);
   const parsedAmount = parseFloat(amountText.replace(',', '.'));
-  const canConfirm = !Number.isNaN(parsedAmount) && parsedAmount > 0 && !!groupSlug;
+  // Un ingreso no tiene categoría en este esquema (ver categoryDictionary.mjs,
+  // 100% de gasto) — solo el gasto necesita una para poder guardarse.
+  const canConfirm = !Number.isNaN(parsedAmount) && parsedAmount > 0 && (isIncome || !!groupSlug);
 
   return (
     <View style={styles.card}>
@@ -45,14 +48,18 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.label}>Categoría</Text>
-          <Pressable onPress={() => setPickerOpen(true)}>
-            <Pill label={category?.label ?? 'Elegir categoría'} color={category ? color : colors.muted} />
-          </Pressable>
+          <Text style={styles.label}>{isIncome ? 'Tipo' : 'Categoría'}</Text>
+          {isIncome ? (
+            <Pill label="💰 Ingreso" color={colors.good} />
+          ) : (
+            <Pressable onPress={() => setPickerOpen(true)}>
+              <Pill label={category?.label ?? 'Elegir categoría'} color={category ? color : colors.muted} />
+            </Pressable>
+          )}
         </View>
       </View>
 
-      {!groupSlug && <Text style={styles.warning}>No pude adivinar la categoría — elige una para confirmar.</Text>}
+      {!isIncome && !groupSlug && <Text style={styles.warning}>No pude adivinar la categoría — elige una para confirmar.</Text>}
       {Number.isNaN(parsedAmount) && <Text style={styles.warning}>No detecté un monto válido.</Text>}
 
       <View style={styles.actions}>

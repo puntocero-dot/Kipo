@@ -13,6 +13,25 @@ const KEYWORDS = flattenKeywords();
 
 const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado'];
 
+// Palabras que sin ambigüedad significan que entró dinero, no que salió —
+// deliberadamente no incluye "pago" ("pago la renta" es un gasto) ni otras
+// palabras que dependen del contexto, siguiendo el mismo criterio
+// determinista/offline del resto del parser (ver docs/NLP_PARSING.md).
+const INCOME_KEYWORDS = [
+  'salario', 'sueldo', 'nomina', 'nómina', 'aguinaldo', 'bono',
+  'me pagaron', 'me depositaron', 'me transfirieron', 'deposito de', 'depósito de',
+  'cobre', 'cobré', 'reembolso', 'ingreso de', 'ingresos de',
+];
+
+/**
+ * true si el texto describe dinero que ENTRA (salario, depósito recibido…)
+ * en vez de un gasto — determinista, sin heurísticas de LLM.
+ */
+export function detectIsIncome(text) {
+  const normalized = stripAccents(text.toLowerCase());
+  return INCOME_KEYWORDS.some((kw) => normalized.includes(stripAccents(kw)));
+}
+
 function stripAccents(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
@@ -112,7 +131,10 @@ export function parseExpenseText(rawText, { now = new Date() } = {}) {
   const text = rawText.trim();
   const { amount, matchedText } = extractAmount(text);
   const textWithoutAmount = matchedText ? text.replace(matchedText, '').trim() : text;
-  const category = detectCategory(text);
+  const isIncome = detectIsIncome(text);
+  // Las categorías del diccionario son todas de gasto (ver categoryDictionary.mjs)
+  // — un ingreso nunca necesita una, así que ni se busca.
+  const category = isIncome ? null : detectCategory(text);
   const date = extractDate(text, now);
   const merchant = extractMerchant(textWithoutAmount);
 
@@ -120,6 +142,7 @@ export function parseExpenseText(rawText, { now = new Date() } = {}) {
 
   return {
     raw_text: rawText,
+    type: isIncome ? 'ingreso' : 'gasto',
     amount,
     currency: null, // resuelto por la app según el perfil de la familia; ver docs/NLP_PARSING.md
     merchant,
@@ -128,7 +151,7 @@ export function parseExpenseText(rawText, { now = new Date() } = {}) {
     category_group: category?.group ?? null,
     category: category?.subcategory ?? null,
     category_label: category?.subcategoryLabel ?? null,
-    confidence: amount !== null && category !== null ? 'high' : amount !== null ? 'medium' : 'low',
-    needs_review: amount === null || category === null,
+    confidence: isIncome ? (amount !== null ? 'high' : 'low') : amount !== null && category !== null ? 'high' : amount !== null ? 'medium' : 'low',
+    needs_review: isIncome ? amount === null : amount === null || category === null,
   };
 }

@@ -68,16 +68,19 @@ export default function ChatScreen() {
             );
           }
 
+          const isIncome = tx.type === 'ingreso';
           const category = findCategory(tx.groupSlug, tx.subSlug);
           return (
             <View key={id} style={styles.confirmedBubble}>
               <Text style={styles.confirmedText}>
-                ✅ ${tx.amount.toFixed(2)} · {category?.label ?? 'Sin categorizar'}
+                ✅ {isIncome ? '+' : ''}${tx.amount.toFixed(2)} · {isIncome ? 'Ingreso' : category?.label ?? 'Sin categorizar'}
               </Text>
               <Text style={styles.confirmedDesc}>{tx.description}</Text>
-              <Pressable onPress={() => setCorrectingId(id)}>
-                <Text style={styles.correctLink}>¿No es correcto? Corregir categoría</Text>
-              </Pressable>
+              {!isIncome && (
+                <Pressable onPress={() => setCorrectingId(id)}>
+                  <Text style={styles.correctLink}>¿No es correcto? Corregir categoría</Text>
+                </Pressable>
+              )}
             </View>
           );
         })}

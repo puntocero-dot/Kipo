@@ -8,6 +8,7 @@ import { findCategory } from './categories';
 import type { CategorizationRule } from './types';
 
 export interface ParsedDraft {
+  type: 'gasto' | 'ingreso';
   amount: number | null;
   merchant: string | null;
   description: string;
@@ -35,13 +36,18 @@ export function parseExpenseWithFamilyRules(
   now: Date = new Date(),
 ): ParsedDraft {
   const base = parseExpenseText(text, { now });
-  const rule = findFamilyRule(text, rules);
+  const isIncome = base.type === 'ingreso';
+  // Las reglas de categorización de la familia son de gasto (nacen de
+  // corregir la categoría de un gasto — ver correctCategory) y no aplican a
+  // un ingreso, que no tiene categoría.
+  const rule = isIncome ? null : findFamilyRule(text, rules);
 
   const groupSlug = rule?.groupSlug ?? base.category_group;
   const subSlug = rule?.subSlug ?? base.category;
   const category = findCategory(groupSlug, subSlug);
 
   return {
+    type: base.type as ParsedDraft['type'],
     amount: base.amount,
     merchant: base.merchant,
     description: base.description,
@@ -50,7 +56,7 @@ export function parseExpenseWithFamilyRules(
     subSlug,
     categoryLabel: category?.label ?? null,
     confidence: rule ? (base.amount !== null ? 'high' : 'medium') : (base.confidence as ParsedDraft['confidence']),
-    needsReview: base.amount === null || groupSlug === null,
+    needsReview: isIncome ? base.amount === null : base.amount === null || groupSlug === null,
     rawText: text,
   };
 }

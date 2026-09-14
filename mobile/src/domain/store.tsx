@@ -53,7 +53,7 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
         created = {
           id: makeId('tx'),
           userId,
-          type: 'gasto',
+          type: draft.type,
           amount: draft.amount ?? 0,
           currency: prev.baseCurrency,
           groupSlug: draft.groupSlug,
