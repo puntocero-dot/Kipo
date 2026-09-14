@@ -7,9 +7,10 @@
 // El fallback a un LLM (Claude) para casos ambiguos vive en `llmFallback.mjs`
 // y solo se invoca cuando confidence === 'low' y hay conexión — ver docs/NLP_PARSING.md.
 
-import { flattenKeywords } from './categoryDictionary.mjs';
+import { flattenIncomeKeywords, flattenKeywords } from './categoryDictionary.mjs';
 
 const KEYWORDS = flattenKeywords();
+const INCOME_KEYWORDS_BY_CATEGORY = flattenIncomeKeywords();
 
 const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miercoles', 'miércoles', 'jueves', 'viernes', 'sabado', 'sábado'];
 
@@ -20,7 +21,7 @@ const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miercoles', 'miércoles', 'juev
 const INCOME_KEYWORDS = [
   'salario', 'sueldo', 'nomina', 'nómina', 'aguinaldo', 'bono',
   'me pagaron', 'me depositaron', 'me transfirieron', 'deposito de', 'depósito de',
-  'cobre', 'cobré', 'reembolso', 'ingreso de', 'ingresos de',
+  'cobre', 'cobré', 'reembolso', 'me reembolsaron', 'ingreso de', 'ingresos de', 'remesa', 'remesas',
 ];
 
 /**
@@ -103,8 +104,23 @@ export function extractDate(text, now = new Date()) {
  * aparezca en el texto y devuelve la categoría asociada.
  */
 export function detectCategory(text) {
+  return detectFromKeywordList(text, KEYWORDS);
+}
+
+/**
+ * Igual que detectCategory, pero busca entre las subcategorías de ingreso
+ * (salario, aguinaldo, bono vacacional, remesas familiares…) en vez de las
+ * de gasto. Solo tiene sentido llamarla una vez que detectIsIncome ya dijo
+ * que el texto es un ingreso — un ingreso sin subcategoría reconocida
+ * simplemente queda como "Ingreso" genérico, no bloquea el guardado.
+ */
+export function detectIncomeCategory(text) {
+  return detectFromKeywordList(text, INCOME_KEYWORDS_BY_CATEGORY);
+}
+
+function detectFromKeywordList(text, keywords) {
   const normalized = stripAccents(text.toLowerCase());
-  for (const entry of KEYWORDS) {
+  for (const entry of keywords) {
     const needle = stripAccents(entry.keyword.toLowerCase());
     if (normalized.includes(needle)) {
       return {
@@ -141,9 +157,10 @@ export function parseExpenseText(rawText, { now = new Date() } = {}) {
   const { amount, matchedText } = extractAmount(text);
   const textWithoutAmount = matchedText ? text.replace(matchedText, '').trim() : text;
   const isIncome = detectIsIncome(text);
-  // Las categorías del diccionario son todas de gasto (ver categoryDictionary.mjs)
-  // — un ingreso nunca necesita una, así que ni se busca.
-  const category = isIncome ? null : detectCategory(text);
+  // Un ingreso no bloquea el guardado si no se reconoce su subcategoría
+  // (ver needs_review abajo) — a diferencia del gasto, que si necesita
+  // categoría para poder confirmarse.
+  const category = isIncome ? detectIncomeCategory(text) : detectCategory(text);
   const date = extractDate(text, now);
   const merchant = extractMerchant(textWithoutAmount);
 

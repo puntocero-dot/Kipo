@@ -76,15 +76,13 @@ export default function ChatScreen() {
               <View style={styles.confirmedHeader}>
                 <Ionicons name="checkmark-circle" size={15} color={colors.good} />
                 <Text style={styles.confirmedText}>
-                  {isIncome ? '+' : ''}${tx.amount.toFixed(2)} · {isIncome ? 'Ingreso' : category?.label ?? 'Sin categorizar'}
+                  {isIncome ? '+' : ''}${tx.amount.toFixed(2)} · {category?.label ?? (isIncome ? 'Ingreso' : 'Sin categorizar')}
                 </Text>
               </View>
               <Text style={styles.confirmedDesc}>{tx.description}</Text>
-              {!isIncome && (
-                <Pressable onPress={() => setCorrectingId(id)}>
-                  <Text style={styles.correctLink}>¿No es correcto? Corregir categoría</Text>
-                </Pressable>
-              )}
+              <Pressable onPress={() => setCorrectingId(id)}>
+                <Text style={styles.correctLink}>¿No es correcto? Corregir categoría</Text>
+              </Pressable>
             </View>
           );
         })}
@@ -107,6 +105,7 @@ export default function ChatScreen() {
       <CategoryPickerModal
         visible={!!correctingId}
         onClose={() => setCorrectingId(null)}
+        kind={state.transactions.find((t) => t.id === correctingId)?.type === 'ingreso' ? 'ingreso' : 'gasto'}
         onSelect={(option) => {
           if (correctingId) {
             correctCategory(correctingId, option.groupSlug, option.subSlug);

@@ -12,6 +12,7 @@ const KIND_MAP = {
   transporte: 'transporte',
   alimentacion_fuera: 'alimentacion_fuera',
   salidas_convivencia: 'salidas_convivencia',
+  ingresos: 'ingreso',
 };
 
 function sqlString(value) {

@@ -10,6 +10,7 @@
 export const CATEGORY_GROUPS = {
   salidas_convivencia: {
     label: 'Salidas y Convivencia',
+    kind: 'gasto',
     priority: 1,
     subcategories: {
       en_familia: {
@@ -37,6 +38,7 @@ export const CATEGORY_GROUPS = {
   },
   transporte: {
     label: 'Transporte',
+    kind: 'gasto',
     priority: 2,
     subcategories: {
       gasolina: { label: 'Gasolina', keywords: ['gasolina', 'combustible', 'gasolinera', 'gas del carro', 'bencina'] },
@@ -49,6 +51,7 @@ export const CATEGORY_GROUPS = {
   },
   alimentacion_fuera: {
     label: 'Alimentación fuera',
+    kind: 'gasto',
     priority: 3,
     subcategories: {
       comida_rapida: {
@@ -69,6 +72,7 @@ export const CATEGORY_GROUPS = {
   },
   necesarios: {
     label: 'Gastos Necesarios / Diarios',
+    kind: 'gasto',
     priority: 4,
     subcategories: {
       supermercado: { label: 'Supermercado', keywords: ['supermercado', 'super', 'mercado', 'despensa', 'walmart', 'pricesmart'] },
@@ -81,6 +85,7 @@ export const CATEGORY_GROUPS = {
   },
   fijos: {
     label: 'Gastos Fijos',
+    kind: 'gasto',
     priority: 5,
     subcategories: {
       vivienda: { label: 'Vivienda', keywords: ['alquiler', 'renta', 'hipoteca'] },
@@ -90,13 +95,36 @@ export const CATEGORY_GROUPS = {
       cuota_vehicular: { label: 'Cuota vehicular', keywords: ['cuota del carro', 'financiamiento del auto', 'prestamo del carro', 'préstamo del carro'] },
     },
   },
+  // A diferencia de los grupos de arriba (gasto), estas subcategorías
+  // solo se buscan cuando el texto ya fue determinado como ingreso — ver
+  // detectIsIncome/INCOME_KEYWORDS en expenseTextParser.mjs. kind: 'ingreso'
+  // es lo que separa este grupo del resto para el parser (flattenKeywords
+  // vs flattenIncomeKeywords) y para el picker de categorías en la UI.
+  ingresos: {
+    label: 'Ingresos',
+    kind: 'ingreso',
+    priority: 1,
+    subcategories: {
+      salario: { label: 'Salario', keywords: ['salario', 'sueldo', 'nomina', 'nómina', 'quincena'] },
+      aguinaldo: { label: 'Aguinaldo', keywords: ['aguinaldo'] },
+      bono_vacacional: {
+        label: 'Bono vacacional',
+        keywords: ['bono vacacional', 'bono de vacaciones', 'pago de vacaciones', 'bono'],
+      },
+      remesas_familiares: {
+        label: 'Remesas familiares',
+        keywords: ['remesa', 'remesas', 'envio de dinero', 'envío de dinero', 'me enviaron dinero'],
+      },
+      reembolso: { label: 'Reembolso', keywords: ['reembolso', 'me reembolsaron', 'devolucion', 'devolución'] },
+      otros_ingresos: { label: 'Otros ingresos', keywords: [] },
+    },
+  },
 };
 
-// Aplana el diccionario a una lista ordenada por prioridad para que el parser
-// solo tenga que iterar un arreglo plano de { groupSlug, subSlug, keyword }.
-export function flattenKeywords() {
+function flattenGroupsOfKind(kind) {
   const flat = [];
   for (const [groupSlug, group] of Object.entries(CATEGORY_GROUPS)) {
+    if (group.kind !== kind) continue;
     for (const [subSlug, sub] of Object.entries(group.subcategories)) {
       for (const keyword of sub.keywords) {
         flat.push({ groupSlug, groupLabel: group.label, subSlug, subLabel: sub.label, keyword, priority: group.priority });
@@ -108,4 +136,18 @@ export function flattenKeywords() {
   // mismo grupo, las palabras clave más largas van primero para evitar coincidencias
   // parciales (que "comida rapida" no sea eclipsada por una coincidencia más corta).
   return flat.sort((a, b) => a.priority - b.priority || b.keyword.length - a.keyword.length);
+}
+
+// Aplana el diccionario a una lista ordenada por prioridad para que el parser
+// solo tenga que iterar un arreglo plano de { groupSlug, subSlug, keyword }.
+// Solo grupos de gasto — ver flattenIncomeKeywords para los de ingreso.
+export function flattenKeywords() {
+  return flattenGroupsOfKind('gasto');
+}
+
+// Misma idea que flattenKeywords, pero para las subcategorías de ingreso
+// (ver detectIsIncome en expenseTextParser.mjs, que decide primero si el
+// texto es un ingreso antes de intentar afinar cuál).
+export function flattenIncomeKeywords() {
+  return flattenGroupsOfKind('ingreso');
 }

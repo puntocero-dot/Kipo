@@ -21,5 +21,11 @@ values
   (null, null, 'servicios', 'Servicios', 'fijo', true, 15),
   (null, null, 'colegiaturas', 'Colegiaturas', 'fijo', true, 16),
   (null, null, 'seguros', 'Seguros', 'fijo', true, 17),
-  (null, null, 'cuota_vehicular', 'Cuota vehicular', 'fijo', true, 18);
+  (null, null, 'cuota_vehicular', 'Cuota vehicular', 'fijo', true, 18),
+  (null, null, 'salario', 'Salario', 'ingreso', true, 19),
+  (null, null, 'aguinaldo', 'Aguinaldo', 'ingreso', true, 20),
+  (null, null, 'bono_vacacional', 'Bono vacacional', 'ingreso', true, 21),
+  (null, null, 'remesas_familiares', 'Remesas familiares', 'ingreso', true, 22),
+  (null, null, 'reembolso', 'Reembolso', 'ingreso', true, 23),
+  (null, null, 'otros_ingresos', 'Otros ingresos', 'ingreso', true, 24);
 

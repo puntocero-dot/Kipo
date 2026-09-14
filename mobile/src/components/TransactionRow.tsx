@@ -53,7 +53,7 @@ export function TransactionRow({
           {transaction.description || transaction.merchant || 'Movimiento'}
         </Text>
         <Text style={styles.subtitle} numberOfLines={1}>
-          {isIncome ? 'Ingreso' : category?.label ?? groupLabel(transaction.groupSlug)}
+          {category?.label ?? (isIncome ? 'Ingreso' : groupLabel(transaction.groupSlug))}
           {memberName ? ` · ${memberName}` : ''}
           {transaction.status === 'pendiente' ? ' · Por confirmar' : ''}
         </Text>

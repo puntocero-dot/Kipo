@@ -72,14 +72,13 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.label}>{isIncome ? 'Tipo' : 'Categoría'}</Text>
-          {isIncome ? (
-            <Pill label="Ingreso" color={colors.good} />
-          ) : (
-            <Pressable onPress={() => setPickerOpen(true)}>
-              <Pill label={category?.label ?? 'Elegir categoría'} color={category ? color : colors.muted} />
-            </Pressable>
-          )}
+          <Text style={styles.label}>{isIncome ? 'Tipo de ingreso' : 'Categoría'}</Text>
+          <Pressable onPress={() => setPickerOpen(true)}>
+            <Pill
+              label={category?.label ?? (isIncome ? 'Ingreso' : 'Elegir categoría')}
+              color={category ? color : isIncome ? colors.good : colors.muted}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -141,6 +140,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
       <CategoryPickerModal
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
+        kind={isIncome ? 'ingreso' : 'gasto'}
         onSelect={(option) => {
           setGroupSlug(option.groupSlug);
           setSubSlug(option.subSlug);
