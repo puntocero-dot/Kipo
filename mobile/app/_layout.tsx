@@ -34,6 +34,7 @@ function AppStack() {
       <Stack.Screen name="budgets" options={{ title: 'Categorías y presupuestos' }} />
       <Stack.Screen name="reminders" options={{ title: 'Recordatorios' }} />
       <Stack.Screen name="family" options={{ title: 'Familia y perfil' }} />
+      <Stack.Screen name="accounts" options={{ title: 'Cuentas y ahorros' }} />
     </Stack>
   );
 }

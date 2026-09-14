@@ -92,6 +92,8 @@ create table accounts (
   owner_id      uuid references users(id) on delete set null,
   name          text not null,
   type          text not null check (type in ('efectivo', 'debito', 'credito', 'ahorros')),
+  bank_name     text, -- solo aplica a debito/credito; null en efectivo
+  last_four     text, -- últimos 4 dígitos de la tarjeta, si aplica
   currency      text not null default 'USD',
   created_at    timestamptz not null default now()
 );
@@ -194,6 +196,27 @@ create table reminders (
 create index idx_reminders_upcoming on reminders (family_id, next_due_date) where is_active;
 
 -- ---------------------------------------------------------------------------
+-- Metas de ahorro (ej. "Viaje a Guatemala"): monto meta, cuánto se lleva
+-- ahorrado, y en qué cuenta está guardado ese dinero. saved_amount se
+-- actualiza directo (no se deriva de transacciones) — cada aporte es una
+-- acción explícita del usuario, no un gasto/ingreso más.
+-- ---------------------------------------------------------------------------
+
+create table savings_goals (
+  id            uuid primary key default gen_random_uuid(),
+  family_id     uuid not null references families(id) on delete cascade,
+  account_id    uuid references accounts(id) on delete set null,
+  name          text not null,
+  target_amount numeric(12,2) not null check (target_amount > 0),
+  saved_amount  numeric(12,2) not null default 0 check (saved_amount >= 0),
+  target_date   date,
+  is_active     boolean not null default true,
+  created_at    timestamptz not null default now()
+);
+
+create index idx_savings_goals_family on savings_goals (family_id) where is_active;
+
+-- ---------------------------------------------------------------------------
 -- Sincronización offline-first (cliente SQLite -> Postgres)
 -- Cada escritura local se encola aquí; un worker la sube cuando hay red.
 -- Conflictos: last-write-wins comparando updated_at por fila.
@@ -270,11 +293,15 @@ alter table categorization_rules enable row level security;
 alter table devices enable row level security;
 alter table budget_alerts_log enable row level security;
 alter table sync_log enable row level security;
+alter table savings_goals enable row level security;
 
 create policy family_isolation_transactions on transactions
   using (family_id in (select my_family_ids()));
 
 create policy family_isolation_budgets on budgets
+  using (family_id in (select my_family_ids()));
+
+create policy family_isolation_savings_goals on savings_goals
   using (family_id in (select my_family_ids()));
 
 create policy family_isolation_reminders on reminders

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { categoryColor, findCategory } from '../domain/categories';
 import { formatDayLabel, formatTime } from '../domain/selectors';
+import { useKipo } from '../domain/store';
 import type { Transaction } from '../domain/types';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 import { CategoryPickerModal } from './CategoryPickerModal';
@@ -26,11 +27,13 @@ interface Props {
 }
 
 export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props) {
+  const { state } = useKipo();
   const isIncome = transaction.type === 'ingreso';
   const [amountText, setAmountText] = useState(transaction.amount ? String(transaction.amount) : '');
   const [groupSlug, setGroupSlug] = useState(transaction.groupSlug);
   const [subSlug, setSubSlug] = useState(transaction.subSlug);
   const [occurredAt, setOccurredAt] = useState(transaction.occurredAt);
+  const [accountId, setAccountId] = useState(transaction.accountId ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const dayOffsetSelected = (offset: number) => {
@@ -103,6 +106,22 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         </View>
       </View>
 
+      {state.accounts.length > 0 && (
+        <View>
+          <Text style={styles.label}>Medio de pago</Text>
+          <View style={styles.dayChipsRow}>
+            <Pressable onPress={() => setAccountId(null)} style={[styles.dayChip, !accountId && styles.dayChipActive]}>
+              <Text style={[styles.dayChipText, !accountId && styles.dayChipTextActive]}>Sin especificar</Text>
+            </Pressable>
+            {state.accounts.map((a) => (
+              <Pressable key={a.id} onPress={() => setAccountId(a.id)} style={[styles.dayChip, accountId === a.id && styles.dayChipActive]}>
+                <Text style={[styles.dayChipText, accountId === a.id && styles.dayChipTextActive]}>{a.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
       {!isIncome && !groupSlug && <Text style={styles.warning}>No pude adivinar la categoría — elige una para confirmar.</Text>}
       {Number.isNaN(parsedAmount) && <Text style={styles.warning}>No detecté un monto válido.</Text>}
 
@@ -110,7 +129,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         <Pressable
           style={[styles.confirmButton, !canConfirm && styles.disabled]}
           disabled={!canConfirm}
-          onPress={() => onConfirm({ amount: parsedAmount, groupSlug, subSlug, occurredAt })}
+          onPress={() => onConfirm({ amount: parsedAmount, groupSlug, subSlug, occurredAt, accountId })}
         >
           <Text style={styles.confirmText}>Guardar</Text>
         </Pressable>
@@ -153,7 +172,7 @@ const styles = StyleSheet.create({
   warning: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.warning },
   whenRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   whenValue: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.textPrimary },
-  dayChipsRow: { flexDirection: 'row', gap: spacing.xs, marginTop: 6 },
+  dayChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: 6 },
   dayChip: { paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.page, borderWidth: 1, borderColor: colors.border },
   dayChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   dayChipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },

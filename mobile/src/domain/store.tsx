@@ -5,7 +5,7 @@ import { makeId } from './id';
 import { KipoContext, type KipoContextValue } from './kipoContext';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
 import { buildSeedState } from './seed';
-import type { Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SmsSuggestion, Transaction } from './types';
+import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
 
 const STORAGE_KEY = 'kipo:test-data:v1';
 
@@ -194,6 +194,32 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, members: [...prev.members, { ...member, id: makeId('user') }] }));
   }, []);
 
+  const addAccount = useCallback((account: Omit<Account, 'id'>) => {
+    setState((prev) => ({ ...prev, accounts: [...prev.accounts, { ...account, id: makeId('acc') }] }));
+  }, []);
+
+  const removeAccount = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, accounts: prev.accounts.filter((a) => a.id !== id) }));
+  }, []);
+
+  const addSavingsGoal = useCallback((goal: Omit<SavingsGoal, 'id' | 'savedAmount'>) => {
+    setState((prev) => ({
+      ...prev,
+      savingsGoals: [...prev.savingsGoals, { ...goal, id: makeId('goal'), savedAmount: 0 }],
+    }));
+  }, []);
+
+  const contributeSavingsGoal = useCallback((id: string, amount: number) => {
+    setState((prev) => ({
+      ...prev,
+      savingsGoals: prev.savingsGoals.map((g) => (g.id === id ? { ...g, savedAmount: g.savedAmount + amount } : g)),
+    }));
+  }, []);
+
+  const removeSavingsGoal = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, savingsGoals: prev.savingsGoals.filter((g) => g.id !== id) }));
+  }, []);
+
   const resetSeedData = useCallback(() => {
     const seeded = buildSeedState();
     setState(seeded);
@@ -218,6 +244,11 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       addReminder,
       removeReminder,
       addMember,
+      addAccount,
+      removeAccount,
+      addSavingsGoal,
+      contributeSavingsGoal,
+      removeSavingsGoal,
       resetSeedData,
     }),
     [
@@ -237,6 +268,11 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       addReminder,
       removeReminder,
       addMember,
+      addAccount,
+      removeAccount,
+      addSavingsGoal,
+      contributeSavingsGoal,
+      removeSavingsGoal,
       resetSeedData,
     ],
   );

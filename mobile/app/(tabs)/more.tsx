@@ -60,6 +60,12 @@ export default function MoreScreen() {
           onPress={() => router.push('/reminders')}
         />
         <MenuRow
+          icon="wallet-outline"
+          label="Cuentas y ahorros"
+          description="Medios de pago, saldos y metas de ahorro"
+          onPress={() => router.push('/accounts')}
+        />
+        <MenuRow
           icon="people-outline"
           label="Familia y perfil"
           description="Miembros, moneda, código de invitación"

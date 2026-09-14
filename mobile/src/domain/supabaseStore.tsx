@@ -16,7 +16,7 @@ import { categoryIdFor, fetchCategoryMaps, KIND_TO_GROUP, type CategoryMaps } fr
 import { KipoContext, emptyKipoState, type KipoContextValue } from './kipoContext';
 import { supabase } from '../lib/supabase';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
-import type { Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SmsSuggestion, Transaction } from './types';
+import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
 
 function dbTransactionToApp(row: any, cats: CategoryMaps): Transaction {
   const cat = row.category_id ? cats.idToSlug.get(row.category_id) : undefined;
@@ -35,6 +35,30 @@ function dbTransactionToApp(row: any, cats: CategoryMaps): Transaction {
     status: row.status,
     occurredAt: row.occurred_at,
     confidence: row.metadata?.confidence,
+    accountId: row.account_id,
+  };
+}
+
+function dbAccountToApp(row: any): Account {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    bankName: row.bank_name,
+    lastFour: row.last_four,
+    currency: row.currency,
+  };
+}
+
+function dbSavingsGoalToApp(row: any): SavingsGoal {
+  return {
+    id: row.id,
+    name: row.name,
+    targetAmount: Number(row.target_amount),
+    savedAmount: Number(row.saved_amount),
+    accountId: row.account_id,
+    targetDate: row.target_date,
+    isActive: row.is_active,
   };
 }
 
@@ -89,7 +113,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     const cats = await fetchCategoryMaps();
     catMapsRef.current = cats;
 
-    const [familyRes, membersRes, txRes, budgetsRes, remindersRes, smsRes, rulesRes] = await Promise.all([
+    const [familyRes, membersRes, txRes, budgetsRes, remindersRes, smsRes, rulesRes, accountsRes, goalsRes] = await Promise.all([
       supabase!.from('families').select('name, invite_code, base_currency').eq('id', familyId).single(),
       supabase!.from('users').select('id, display_name, role').eq('family_id', familyId),
       supabase!.from('transactions').select('*').eq('family_id', familyId).order('occurred_at', { ascending: false }),
@@ -97,6 +121,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       supabase!.from('reminders').select('*').eq('family_id', familyId),
       supabase!.from('sms_inbox').select('*').eq('user_id', membershipId).order('received_at', { ascending: false }),
       supabase!.from('categorization_rules').select('id, keyword, category_id').eq('family_id', familyId),
+      supabase!.from('accounts').select('*').eq('family_id', familyId),
+      supabase!.from('savings_goals').select('*').eq('family_id', familyId),
     ]);
 
     const members: FamilyMember[] = (membersRes.data ?? []).map((r: any) => ({ id: r.id, name: r.display_name, role: r.role }));
@@ -110,6 +136,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
         return cat ? { id: r.id, keyword: r.keyword, groupSlug: cat.groupSlug, subSlug: cat.subSlug } : null;
       })
       .filter((r: CategorizationRule | null): r is CategorizationRule => r !== null);
+    const accounts = (accountsRes.data ?? []).map(dbAccountToApp);
+    const savingsGoals = (goalsRes.data ?? []).map(dbSavingsGoalToApp);
 
     setState({
       familyName: familyRes.data?.name ?? 'Mi espacio',
@@ -121,6 +149,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       reminders,
       smsInbox,
       categorizationRules,
+      accounts,
+      savingsGoals,
     });
     setLoading(false);
   }, [familyId, membershipId]);
@@ -142,6 +172,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       .on('postgres_changes', { event: '*', schema: 'public', table: 'budgets', filter: `family_id=eq.${familyId}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders', filter: `family_id=eq.${familyId}` }, () => loadAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `family_id=eq.${familyId}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts', filter: `family_id=eq.${familyId}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `family_id=eq.${familyId}` }, () => loadAll())
       .subscribe();
 
     return () => {
@@ -217,6 +249,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       if (patch.description !== undefined) dbPatch.description = patch.description;
       if (patch.merchant !== undefined) dbPatch.merchant = patch.merchant;
       if (patch.occurredAt !== undefined) dbPatch.occurred_at = patch.occurredAt;
+      if (patch.accountId !== undefined) dbPatch.account_id = patch.accountId;
       if (patch.groupSlug !== undefined || patch.subSlug !== undefined) {
         const tx = state.transactions.find((t) => t.id === id);
         dbPatch.category_id = categoryIdFor(
@@ -437,6 +470,69 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     console.warn('addMember: en modo Supabase, comparte el código de invitación en vez de agregar miembros directo.');
   }, []);
 
+  const addAccount = useCallback(
+    (account: Omit<Account, 'id'>) => {
+      (async () => {
+        const { data } = await supabase!
+          .from('accounts')
+          .insert({
+            family_id: familyId,
+            name: account.name,
+            type: account.type,
+            bank_name: account.bankName,
+            last_four: account.lastFour,
+            currency: account.currency,
+          })
+          .select()
+          .single();
+        if (data) setState((prev) => ({ ...prev, accounts: [...prev.accounts, dbAccountToApp(data)] }));
+      })();
+    },
+    [familyId],
+  );
+
+  const removeAccount = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, accounts: prev.accounts.filter((a) => a.id !== id) }));
+    supabase!.from('accounts').delete().eq('id', id).then();
+  }, []);
+
+  const addSavingsGoal = useCallback(
+    (goal: Omit<SavingsGoal, 'id' | 'savedAmount'>) => {
+      (async () => {
+        const { data } = await supabase!
+          .from('savings_goals')
+          .insert({
+            family_id: familyId,
+            account_id: goal.accountId,
+            name: goal.name,
+            target_amount: goal.targetAmount,
+            target_date: goal.targetDate,
+            is_active: goal.isActive,
+          })
+          .select()
+          .single();
+        if (data) setState((prev) => ({ ...prev, savingsGoals: [...prev.savingsGoals, dbSavingsGoalToApp(data)] }));
+      })();
+    },
+    [familyId],
+  );
+
+  const contributeSavingsGoal = useCallback(
+    (id: string, amount: number) => {
+      const goal = state.savingsGoals.find((g) => g.id === id);
+      if (!goal) return;
+      const savedAmount = goal.savedAmount + amount;
+      setState((prev) => ({ ...prev, savingsGoals: prev.savingsGoals.map((g) => (g.id === id ? { ...g, savedAmount } : g)) }));
+      supabase!.from('savings_goals').update({ saved_amount: savedAmount }).eq('id', id).then();
+    },
+    [state.savingsGoals],
+  );
+
+  const removeSavingsGoal = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, savingsGoals: prev.savingsGoals.filter((g) => g.id !== id) }));
+    supabase!.from('savings_goals').delete().eq('id', id).then();
+  }, []);
+
   const resetSeedData = useCallback(() => {
     console.warn('resetSeedData no aplica en modo Supabase (son datos reales, no una semilla de prueba).');
   }, []);
@@ -465,6 +561,11 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       addReminder,
       removeReminder,
       addMember,
+      addAccount,
+      removeAccount,
+      addSavingsGoal,
+      contributeSavingsGoal,
+      removeSavingsGoal,
       resetSeedData,
     }),
     [
@@ -485,6 +586,11 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       addReminder,
       removeReminder,
       addMember,
+      addAccount,
+      removeAccount,
+      addSavingsGoal,
+      contributeSavingsGoal,
+      removeSavingsGoal,
       resetSeedData,
     ],
   );

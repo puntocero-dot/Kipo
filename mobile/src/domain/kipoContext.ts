@@ -5,7 +5,7 @@
 // según cuál esté montada — mobile/app/_layout.tsx decide cuál usar según
 // si hay un proyecto de Supabase configurado.
 import { createContext, useContext } from 'react';
-import type { Budget, FamilyMember, KipoState, Reminder, SmsSuggestion, Transaction } from './types';
+import type { Account, Budget, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
 
 export interface KipoContextValue {
   state: KipoState;
@@ -25,6 +25,11 @@ export interface KipoContextValue {
   addReminder: (reminder: Omit<Reminder, 'id'>) => void;
   removeReminder: (id: string) => void;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
+  addAccount: (account: Omit<Account, 'id'>) => void;
+  removeAccount: (id: string) => void;
+  addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'savedAmount'>) => void;
+  contributeSavingsGoal: (id: string, amount: number) => void;
+  removeSavingsGoal: (id: string) => void;
   resetSeedData: () => void;
 }
 
@@ -47,5 +52,7 @@ export function emptyKipoState(): KipoState {
     reminders: [],
     smsInbox: [],
     categorizationRules: [],
+    accounts: [],
+    savingsGoals: [],
   };
 }
