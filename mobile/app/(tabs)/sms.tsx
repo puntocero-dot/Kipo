@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryPickerModal } from '../../src/components/CategoryPickerModal';
+import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { Card, EmptyState, PrimaryButton, Screen, SecondaryButton, SectionTitle } from '../../src/components/ui';
 import { useKipo } from '../../src/domain/store';
 import { colors, radius, spacing } from '../../src/theme';
@@ -20,6 +21,7 @@ export default function SmsInboxScreen() {
   const resolved = state.smsInbox.filter((s) => s.status !== 'pendiente').slice(0, 5);
 
   return (
+    <TabScreenGuard>
     <Screen>
       <Card>
         <SectionTitle>🧪 Simular alerta bancaria</SectionTitle>
@@ -102,6 +104,7 @@ export default function SmsInboxScreen() {
         }}
       />
     </Screen>
+    </TabScreenGuard>
   );
 }
 

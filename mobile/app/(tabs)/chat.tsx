@@ -1,19 +1,11 @@
 import React, { useRef, useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryPickerModal } from '../../src/components/CategoryPickerModal';
 import { ConfirmCaptureCard } from '../../src/components/ConfirmCaptureCard';
+import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { findCategory } from '../../src/domain/categories';
 import { useKipo } from '../../src/domain/store';
+import { notify } from '../../src/lib/confirm';
 import { colors, radius, spacing } from '../../src/theme';
 
 const EXAMPLES = [
@@ -40,6 +32,7 @@ export default function ChatScreen() {
   };
 
   return (
+    <TabScreenGuard>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
       <ScrollView
         ref={scrollRef}
@@ -110,12 +103,13 @@ export default function ChatScreen() {
         onSelect={(option) => {
           if (correctingId) {
             correctCategory(correctingId, option.groupSlug, option.subSlug);
-            Alert.alert('Categoría corregida', 'Kipo recordará esto para la próxima vez.');
+            notify('Categoría corregida', 'Kipo recordará esto para la próxima vez.');
           }
           setCorrectingId(null);
         }}
       />
     </KeyboardAvoidingView>
+    </TabScreenGuard>
   );
 }
 

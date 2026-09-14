@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DonutChart } from '../../src/components/DonutChart';
+import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen, SectionTitle } from '../../src/components/ui';
 import { computeMacroDistribution, computeMonthSummary, computeUpcomingReminders, daysUntil } from '../../src/domain/selectors';
@@ -28,7 +29,7 @@ export default function DashboardScreen() {
   const usedPct = summary.income > 0 ? Math.min(summary.expenses / summary.income, 1) : 0;
 
   return (
-    <View style={{ flex: 1 }}>
+    <TabScreenGuard>
       <Screen>
         <View>
           <Text style={styles.greeting}>{state.familyName}</Text>
@@ -99,7 +100,9 @@ export default function DashboardScreen() {
           {latest.length === 0 ? (
             <EmptyState message="Aún no hay movimientos registrados." />
           ) : (
-            latest.map((t) => <TransactionRow key={t.id} transaction={t} memberName={memberName(t.userId)} />)
+            latest.map((t) => (
+              <TransactionRow key={t.id} transaction={t} memberName={memberName(t.userId)} />
+            ))
           )}
         </Card>
       </Screen>
@@ -107,7 +110,7 @@ export default function DashboardScreen() {
       <Pressable style={styles.fab} onPress={() => router.push('/chat')}>
         <Text style={styles.fabIcon}>+</Text>
       </Pressable>
-    </View>
+    </TabScreenGuard>
   );
 }
 

@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen } from '../../src/components/ui';
 import { GROUP_LABELS, GROUP_ORDER, categoryColor } from '../../src/domain/categories';
 import { useKipo } from '../../src/domain/store';
+import { confirmAction } from '../../src/lib/confirm';
 import { colors, radius, spacing } from '../../src/theme';
 
 export default function HistoryScreen() {
-  const { state } = useKipo();
+  const { state, deleteTransaction } = useKipo();
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [memberFilter, setMemberFilter] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -27,6 +29,7 @@ export default function HistoryScreen() {
   const memberName = (id: string) => state.members.find((m) => m.id === id)?.name;
 
   return (
+    <TabScreenGuard>
     <Screen>
       <TextInput
         style={styles.search}
@@ -69,10 +72,25 @@ export default function HistoryScreen() {
         {filtered.length === 0 ? (
           <EmptyState message="No hay movimientos que coincidan con los filtros." />
         ) : (
-          filtered.map((t) => <TransactionRow key={t.id} transaction={t} memberName={memberName(t.userId)} />)
+          filtered.map((t) => (
+            <TransactionRow
+              key={t.id}
+              transaction={t}
+              memberName={memberName(t.userId)}
+              onDelete={() =>
+                confirmAction(
+                  'Eliminar movimiento',
+                  `¿Borrar "${t.description || t.merchant || 'este movimiento'}"?`,
+                  'Eliminar',
+                  () => deleteTransaction(t.id),
+                )
+              }
+            />
+          ))
         )}
       </Card>
     </Screen>
+    </TabScreenGuard>
   );
 }
 

@@ -39,6 +39,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
               value={amountText}
               onChangeText={setAmountText}
               placeholder="0.00"
+              autoFocus={!transaction.amount}
             />
           </View>
         </View>

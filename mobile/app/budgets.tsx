@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BudgetBarRow } from '../src/components/BudgetBarRow';
 import { CategoryPickerModal } from '../src/components/CategoryPickerModal';
 import { Card, EmptyState, PrimaryButton, Screen, SecondaryButton, SectionTitle } from '../src/components/ui';
 import { computeBudgetUsage } from '../src/domain/selectors';
 import { useKipo } from '../src/domain/store';
+import { notify } from '../src/lib/confirm';
 import { colors, radius, spacing } from '../src/theme';
 
 export default function BudgetsScreen() {
@@ -19,7 +20,7 @@ export default function BudgetsScreen() {
   const submit = () => {
     const amountLimit = parseFloat(limit.replace(',', '.'));
     if (!name.trim() || Number.isNaN(amountLimit) || amountLimit <= 0) {
-      Alert.alert('Datos incompletos', 'Ingresa un nombre y un límite mensual válido.');
+      notify('Datos incompletos', 'Ingresa un nombre y un límite mensual válido.');
       return;
     }
     addBudget({ name: name.trim(), groupSlug: groupSlug === 'general' ? null : groupSlug, amountLimit, alertThresholdPct: 80 });

@@ -1,9 +1,11 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { Card, Screen, SectionTitle } from '../../src/components/ui';
 import { useAuth } from '../../src/domain/authStore';
 import { useKipo } from '../../src/domain/store';
+import { confirmAction } from '../../src/lib/confirm';
 import { isSupabaseConfigured } from '../../src/lib/supabase';
 import { colors, radius, spacing } from '../../src/theme';
 
@@ -29,6 +31,7 @@ export default function MoreScreen() {
   const auth = isSupabaseConfigured ? useAuth() : null;
 
   return (
+    <TabScreenGuard>
     <Screen>
       <Card>
         <MenuRow
@@ -67,12 +70,7 @@ export default function MoreScreen() {
           </Pressable>
           <Pressable
             style={styles.resetButton}
-            onPress={() =>
-              Alert.alert('Cerrar sesión', '¿Seguro que quieres cerrar sesión?', [
-                { text: 'Cancelar', style: 'cancel' },
-                { text: 'Cerrar sesión', style: 'destructive', onPress: () => auth.signOut() },
-              ])
-            }
+            onPress={() => confirmAction('Cerrar sesión', '¿Seguro que quieres cerrar sesión?', 'Cerrar sesión', () => auth.signOut())}
           >
             <Text style={styles.resetText}>Cerrar sesión</Text>
           </Pressable>
@@ -87,10 +85,12 @@ export default function MoreScreen() {
           <Pressable
             style={styles.resetButton}
             onPress={() =>
-              Alert.alert('Reiniciar datos de prueba', '¿Restaurar la data semilla y descartar los cambios hechos en esta sesión?', [
-                { text: 'Cancelar', style: 'cancel' },
-                { text: 'Reiniciar', style: 'destructive', onPress: resetSeedData },
-              ])
+              confirmAction(
+                'Reiniciar datos de prueba',
+                '¿Restaurar la data semilla y descartar los cambios hechos en esta sesión?',
+                'Reiniciar',
+                resetSeedData,
+              )
             }
           >
             <Text style={styles.resetText}>Reiniciar datos de prueba</Text>
@@ -98,6 +98,7 @@ export default function MoreScreen() {
         </Card>
       )}
     </Screen>
+    </TabScreenGuard>
   );
 }
 

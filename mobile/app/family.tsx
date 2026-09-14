@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Card, PrimaryButton, Screen, SectionTitle } from '../src/components/ui';
 import { useKipo } from '../src/domain/store';
+import { notify } from '../src/lib/confirm';
 import { isSupabaseConfigured } from '../src/lib/supabase';
 import { colors, radius, spacing } from '../src/theme';
 
@@ -57,7 +58,7 @@ export default function FamilyScreen() {
               if (!name.trim()) return;
               addMember({ name: name.trim(), role: 'member' });
               setName('');
-              Alert.alert('Miembro agregado', `${name.trim()} ya puede registrar gastos en Kipo.`);
+              notify('Miembro agregado', `${name.trim()} ya puede registrar gastos en Kipo.`);
             }}
           />
         </Card>
