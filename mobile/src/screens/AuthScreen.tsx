@@ -1,9 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../domain/authStore';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, spacing } from '../theme';
 
 export function AuthScreen() {
   const { signIn, signUp } = useAuth();
@@ -17,8 +18,8 @@ export function AuthScreen() {
   const submit = async () => {
     setError(null);
     setInfo(null);
-    if (!email.includes('@') || password.length < 6) {
-      setError('Ingresa un correo válido y una contraseña de al menos 6 caracteres.');
+    if (!email.includes('@') || password.length < 8) {
+      setError('Ingresa un correo válido y una contraseña de al menos 8 caracteres.');
       return;
     }
     setBusy(true);
@@ -46,7 +47,7 @@ export function AuthScreen() {
             <Text style={styles.subtitle}>Kipo · Finanzas familiares</Text>
 
             <View style={styles.field}>
-              <Text style={styles.fieldIcon}>👤</Text>
+              <Ionicons name="person-outline" size={16} color="rgba(255,255,255,0.85)" />
               <TextInput
                 style={styles.input}
                 placeholder="Correo electrónico"
@@ -59,7 +60,7 @@ export function AuthScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.fieldIcon}>🔒</Text>
+              <Ionicons name="lock-closed-outline" size={16} color="rgba(255,255,255,0.85)" />
               <TextInput
                 style={styles.input}
                 placeholder="Contraseña"
@@ -119,16 +120,16 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontFamily: fonts.displayBlack,
+    fontSize: 27,
     color: '#fff',
     textAlign: 'center',
-    letterSpacing: 3,
+    letterSpacing: 2,
     textShadowColor: 'rgba(0,0,0,0.25)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginBottom: spacing.sm },
+  subtitle: { fontFamily: fonts.bodyMedium, fontSize: 12, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginBottom: spacing.sm },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -137,10 +138,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.45)',
     paddingBottom: 8,
   },
-  fieldIcon: { fontSize: 14 },
-  input: { flex: 1, fontSize: 14, color: '#fff', paddingVertical: 4 },
-  error: { color: '#ffe1d6', fontSize: 12, backgroundColor: 'rgba(208,59,59,0.35)', padding: spacing.sm, borderRadius: radius.sm },
-  info: { color: '#eafff0', fontSize: 12, backgroundColor: 'rgba(12,163,12,0.35)', padding: spacing.sm, borderRadius: radius.sm },
+  input: { flex: 1, fontFamily: fonts.body, fontSize: 14, color: '#fff', paddingVertical: 4 },
+  error: { color: '#ffe1d6', fontFamily: fonts.bodyMedium, fontSize: 12, backgroundColor: 'rgba(184,69,47,0.4)', padding: spacing.sm, borderRadius: radius.sm },
+  info: { color: '#eafff0', fontFamily: fonts.bodyMedium, fontSize: 12, backgroundColor: 'rgba(60,139,74,0.4)', padding: spacing.sm, borderRadius: radius.sm },
   primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.pill,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
   },
-  primaryButtonText: { color: '#fff', fontWeight: '800', letterSpacing: 1, fontSize: 13 },
-  switchText: { textAlign: 'center', color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: spacing.xs },
-  switchLink: { color: '#eaf4ff', fontWeight: '700' },
+  primaryButtonText: { color: '#fff', fontFamily: fonts.bodyBold, letterSpacing: 1, fontSize: 13 },
+  switchText: { fontFamily: fonts.body, textAlign: 'center', color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: spacing.xs },
+  switchLink: { fontFamily: fonts.bodyBold, color: '#eaf4ff' },
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CATEGORY_OPTIONS, type CategoryOption } from '../domain/categories';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
   visible: boolean;
@@ -45,17 +45,18 @@ export function CategoryPickerModal({ visible, onClose, onSelect }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(11,11,11,0.4)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(35,31,26,0.45)' },
   sheet: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
     padding: spacing.lg,
     gap: spacing.md,
+    ...shadow.raised,
   },
-  title: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  title: { fontFamily: fonts.display, fontSize: 18, color: colors.textPrimary },
   groupBlock: { marginBottom: spacing.md, gap: spacing.xs },
-  groupLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
+  groupLabel: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
   optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   chip: {
     flexDirection: 'row',
@@ -64,8 +65,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  chipText: { fontSize: 13, color: colors.textPrimary },
+  chipText: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textPrimary },
 });

@@ -5,7 +5,7 @@
 // bien, no son datos inventados a mano desconectados de la lógica real.
 import { makeId } from './id';
 import { parseExpenseWithFamilyRules, parseBankSms } from './parsing';
-import type { Budget, FamilyMember, KipoState, Reminder, SmsSuggestion, Transaction } from './types';
+import type { Account, Budget, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
 
 // La semilla se ve bien sin importar qué día del mes se ejecute la demo: los
 // 34 mensajes se reparten proporcionalmente entre el día 1 y "hoy" del mes en
@@ -187,6 +187,22 @@ function buildSeedReminders(): Reminder[] {
   ];
 }
 
+function buildSeedAccounts(): Account[] {
+  return [
+    { id: makeId('acc'), name: 'Efectivo', type: 'efectivo', bankName: null, lastFour: null, currency: 'USD' },
+    { id: makeId('acc'), name: 'Cuenta de débito', type: 'debito', bankName: 'Banco Agrícola', lastFour: '4521', currency: 'USD' },
+    { id: makeId('acc'), name: 'Tarjeta de crédito', type: 'credito', bankName: 'Banco Agrícola', lastFour: '7788', currency: 'USD' },
+    { id: makeId('acc'), name: 'Ahorros', type: 'ahorros', bankName: 'Banco Agrícola', lastFour: null, currency: 'USD' },
+  ];
+}
+
+function buildSeedSavingsGoals(accounts: Account[]): SavingsGoal[] {
+  const ahorros = accounts.find((a) => a.type === 'ahorros');
+  return [
+    { id: makeId('goal'), name: 'Viaje a Guatemala', targetAmount: 500, savedAmount: 120, accountId: ahorros?.id ?? null, targetDate: null, isActive: true },
+  ];
+}
+
 function buildSeedSmsInbox(): SmsSuggestion[] {
   const raw1 = 'Compra aprobada por $18.50 en CAFETERIA EXPRESS el ' + new Date().toLocaleDateString('es-GT');
   const raw2 = 'Su tarjeta terminada en 4521 fue debitada por $65.00 en SUPERMERCADO LA COLONIA';
@@ -210,6 +226,8 @@ export function buildSeedState(): KipoState {
     { id: CARLOS, name: 'Carlos Pérez', role: 'member' },
   ];
 
+  const accounts = buildSeedAccounts();
+
   return {
     familyName: 'Familia Pérez',
     inviteCode: 'PEREZ2026',
@@ -220,5 +238,7 @@ export function buildSeedState(): KipoState {
     reminders: buildSeedReminders(),
     smsInbox: buildSeedSmsInbox(),
     categorizationRules: [],
+    accounts,
+    savingsGoals: buildSeedSavingsGoals(accounts),
   };
 }

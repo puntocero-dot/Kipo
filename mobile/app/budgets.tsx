@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BudgetBarRow } from '../src/components/BudgetBarRow';
@@ -6,7 +7,7 @@ import { Card, EmptyState, PrimaryButton, Screen, SecondaryButton, SectionTitle 
 import { computeBudgetUsage } from '../src/domain/selectors';
 import { useKipo } from '../src/domain/store';
 import { notify } from '../src/lib/confirm';
-import { colors, radius, spacing } from '../src/theme';
+import { colors, fonts, radius, spacing } from '../src/theme';
 
 export default function BudgetsScreen() {
   const { state, addBudget, removeBudget } = useKipo();
@@ -32,9 +33,9 @@ export default function BudgetsScreen() {
   return (
     <Screen>
       <Card>
-        <SectionTitle>Presupuestos activos</SectionTitle>
+        <SectionTitle icon="pie-chart-outline">Presupuestos activos</SectionTitle>
         {usage.length === 0 ? (
-          <EmptyState message="Aún no has definido presupuestos." />
+          <EmptyState icon="wallet-outline" message="Aún no has definido presupuestos." />
         ) : (
           usage.map((b) => (
             <View key={b.id} style={styles.budgetItem}>
@@ -48,7 +49,7 @@ export default function BudgetsScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Nuevo presupuesto</SectionTitle>
+        <SectionTitle icon="add-circle-outline">Nuevo presupuesto</SectionTitle>
         <TextInput style={styles.input} placeholder="Nombre (ej. Salidas y comida fuera)" value={name} onChangeText={setName} />
         <TextInput
           style={styles.input}
@@ -61,6 +62,7 @@ export default function BudgetsScreen() {
           <Text style={styles.categoryPickerText}>
             {groupSlug === 'general' ? 'Presupuesto general del mes' : `Categoría: ${groupSlug}`}
           </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.muted} />
         </Pressable>
         <SecondaryButton label="Usar presupuesto general (no por categoría)" onPress={() => setGroupSlug('general')} />
         <PrimaryButton label="Crear presupuesto" onPress={submit} />
@@ -80,14 +82,26 @@ export default function BudgetsScreen() {
 
 const styles = StyleSheet.create({
   budgetItem: { borderTopWidth: 1, borderColor: colors.gridline, paddingVertical: spacing.sm, gap: 6 },
-  removeLink: { color: colors.critical, fontSize: 12, alignSelf: 'flex-end' },
+  removeLink: { color: colors.critical, fontFamily: fonts.bodyMedium, fontSize: 12, alignSelf: 'flex-end' },
   input: {
     backgroundColor: colors.page,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 11,
+    fontFamily: fonts.body,
     fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  categoryPicker: { backgroundColor: colors.page, borderRadius: radius.md, padding: spacing.sm },
-  categoryPickerText: { color: colors.textSecondary, fontSize: 13 },
+  categoryPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.page,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  categoryPickerText: { fontFamily: fonts.bodyMedium, color: colors.textSecondary, fontSize: 13 },
 });

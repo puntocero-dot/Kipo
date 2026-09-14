@@ -1,3 +1,11 @@
+import { Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold } from '@expo-google-fonts/outfit';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
@@ -9,15 +17,16 @@ import { SupabaseKipoProvider } from '../src/domain/supabaseStore';
 import { isSupabaseConfigured } from '../src/lib/supabase';
 import { AuthScreen } from '../src/screens/AuthScreen';
 import { WorkspaceGateScreen } from '../src/screens/WorkspaceGateScreen';
-import { colors } from '../src/theme';
+import { colors, fonts } from '../src/theme';
 
 function AppStack() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.card },
+        headerStyle: { backgroundColor: colors.page },
+        headerShadowVisible: false,
         headerTintColor: colors.textPrimary,
-        headerTitleStyle: { fontWeight: '700' },
+        headerTitleStyle: { fontFamily: fonts.displaySemibold, fontSize: 17 },
         contentStyle: { backgroundColor: colors.page },
       }}
     >
@@ -25,6 +34,7 @@ function AppStack() {
       <Stack.Screen name="budgets" options={{ title: 'Categorías y presupuestos' }} />
       <Stack.Screen name="reminders" options={{ title: 'Recordatorios' }} />
       <Stack.Screen name="family" options={{ title: 'Familia y perfil' }} />
+      <Stack.Screen name="accounts" options={{ title: 'Cuentas y ahorros' }} />
     </Stack>
   );
 }
@@ -56,6 +66,18 @@ function RemoteGate() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    Outfit_800ExtraBold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+  });
+
+  if (!fontsLoaded) return <LoadingScreen />;
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />

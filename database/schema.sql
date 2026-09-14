@@ -92,6 +92,8 @@ create table accounts (
   owner_id      uuid references users(id) on delete set null,
   name          text not null,
   type          text not null check (type in ('efectivo', 'debito', 'credito', 'ahorros')),
+  bank_name     text, -- solo aplica a debito/credito; null en efectivo
+  last_four     text, -- últimos 4 dígitos de la tarjeta, si aplica
   currency      text not null default 'USD',
   created_at    timestamptz not null default now()
 );
@@ -194,6 +196,27 @@ create table reminders (
 create index idx_reminders_upcoming on reminders (family_id, next_due_date) where is_active;
 
 -- ---------------------------------------------------------------------------
+-- Metas de ahorro (ej. "Viaje a Guatemala"): monto meta, cuánto se lleva
+-- ahorrado, y en qué cuenta está guardado ese dinero. saved_amount se
+-- actualiza directo (no se deriva de transacciones) — cada aporte es una
+-- acción explícita del usuario, no un gasto/ingreso más.
+-- ---------------------------------------------------------------------------
+
+create table savings_goals (
+  id            uuid primary key default gen_random_uuid(),
+  family_id     uuid not null references families(id) on delete cascade,
+  account_id    uuid references accounts(id) on delete set null,
+  name          text not null,
+  target_amount numeric(12,2) not null check (target_amount > 0),
+  saved_amount  numeric(12,2) not null default 0 check (saved_amount >= 0),
+  target_date   date,
+  is_active     boolean not null default true,
+  created_at    timestamptz not null default now()
+);
+
+create index idx_savings_goals_family on savings_goals (family_id) where is_active;
+
+-- ---------------------------------------------------------------------------
 -- Sincronización offline-first (cliente SQLite -> Postgres)
 -- Cada escritura local se encola aquí; un worker la sube cuando hay red.
 -- Conflictos: last-write-wins comparando updated_at por fila.
@@ -270,11 +293,15 @@ alter table categorization_rules enable row level security;
 alter table devices enable row level security;
 alter table budget_alerts_log enable row level security;
 alter table sync_log enable row level security;
+alter table savings_goals enable row level security;
 
 create policy family_isolation_transactions on transactions
   using (family_id in (select my_family_ids()));
 
 create policy family_isolation_budgets on budgets
+  using (family_id in (select my_family_ids()));
+
+create policy family_isolation_savings_goals on savings_goals
   using (family_id in (select my_family_ids()));
 
 create policy family_isolation_reminders on reminders
@@ -298,14 +325,57 @@ create policy members_see_peers on users
 create policy users_update_own_row on users
   for update using (auth_user_id = auth.uid());
 
-create policy visible_categories on categories
+-- Sin `with check` propio, Postgres reutiliza el `using` de arriba también
+-- como check — y ese check no restringe qué columnas cambian. Sin este
+-- trigger, cualquiera podría hacer UPDATE sobre su propia fila y ponerse
+-- role='admin', o cambiar su family_id a una familia ajena sin invitación
+-- (ver migración 0006_security_hardening.sql).
+create or replace function prevent_users_privilege_escalation()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.family_id is distinct from old.family_id then
+    raise exception 'No se puede cambiar de familia editando el perfil directamente.';
+  end if;
+  if new.role is distinct from old.role then
+    raise exception 'El rol no se puede cambiar desde el cliente.';
+  end if;
+  if new.auth_user_id is distinct from old.auth_user_id then
+    raise exception 'No se puede reasignar la identidad de esta fila.';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_prevent_users_privilege_escalation
+  before update on users
+  for each row execute function prevent_users_privilege_escalation();
+
+-- Separado en SELECT (amplio, incluye family_id null = catálogo del
+-- sistema) y escritura (solo tus propias filas, nunca family_id null) —
+-- una sola policy sin `for` dejaba que cualquiera escribiera sobre el
+-- catálogo global compartido (ver migración 0006_security_hardening.sql).
+create policy select_categories on categories
   for select using (family_id is null or family_id in (select my_family_ids()));
+create policy insert_own_categories on categories
+  for insert with check (family_id in (select my_family_ids()));
+create policy update_own_categories on categories
+  for update using (family_id in (select my_family_ids()));
+create policy delete_own_categories on categories
+  for delete using (family_id in (select my_family_ids()));
 
 create policy family_isolation_accounts on accounts
   using (family_id in (select my_family_ids()));
 
-create policy family_isolation_categorization_rules on categorization_rules
-  using (family_id is null or family_id in (select my_family_ids()));
+create policy select_categorization_rules on categorization_rules
+  for select using (family_id is null or family_id in (select my_family_ids()));
+create policy insert_own_categorization_rules on categorization_rules
+  for insert with check (family_id in (select my_family_ids()));
+create policy update_own_categorization_rules on categorization_rules
+  for update using (family_id in (select my_family_ids()));
+create policy delete_own_categorization_rules on categorization_rules
+  for delete using (family_id in (select my_family_ids()));
 
 create policy own_devices on devices
   using (user_id in (select my_membership_ids()));

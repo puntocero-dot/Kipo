@@ -27,6 +27,28 @@ export interface Transaction {
   status: TransactionStatus;
   occurredAt: string;
   confidence?: Confidence;
+  accountId?: string | null;
+}
+
+export type AccountType = 'efectivo' | 'debito' | 'credito' | 'ahorros';
+
+export interface Account {
+  id: string;
+  name: string;
+  type: AccountType;
+  bankName: string | null;
+  lastFour: string | null;
+  currency: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  accountId: string | null;
+  targetDate: string | null; // fecha ISO (solo día), opcional
+  isActive: boolean;
 }
 
 export interface Budget {
@@ -76,4 +98,6 @@ export interface KipoState {
   reminders: Reminder[];
   smsInbox: SmsSuggestion[];
   categorizationRules: CategorizationRule[];
+  accounts: Account[];
+  savingsGoals: SavingsGoal[];
 }

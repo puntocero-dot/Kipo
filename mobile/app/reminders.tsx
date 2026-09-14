@@ -4,7 +4,7 @@ import { Card, EmptyState, PrimaryButton, Screen, SectionTitle } from '../src/co
 import { daysUntil } from '../src/domain/selectors';
 import { useKipo } from '../src/domain/store';
 import { notify } from '../src/lib/confirm';
-import { colors, radius, spacing } from '../src/theme';
+import { colors, fonts, radius, spacing } from '../src/theme';
 
 export default function RemindersScreen() {
   const { state, addReminder, removeReminder } = useKipo();
@@ -38,9 +38,9 @@ export default function RemindersScreen() {
   return (
     <Screen>
       <Card>
-        <SectionTitle>Pagos fijos recurrentes</SectionTitle>
+        <SectionTitle icon="alarm-outline">Pagos fijos recurrentes</SectionTitle>
         {sorted.length === 0 ? (
-          <EmptyState message="No tienes recordatorios configurados." />
+          <EmptyState icon="calendar-clear-outline" message="No tienes recordatorios configurados." />
         ) : (
           sorted.map((r) => {
             const d = daysUntil(r.nextDueDate);
@@ -63,7 +63,7 @@ export default function RemindersScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Nuevo recordatorio</SectionTitle>
+        <SectionTitle icon="add-circle-outline">Nuevo recordatorio</SectionTitle>
         <TextInput style={styles.input} placeholder="Nombre (ej. Internet)" value={name} onChangeText={setName} />
         <TextInput style={styles.input} placeholder="Monto ($, opcional)" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
         <TextInput style={styles.input} placeholder="Vence en cuántos días" keyboardType="number-pad" value={dueInDays} onChangeText={setDueInDays} />
@@ -75,8 +75,17 @@ export default function RemindersScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderColor: colors.gridline, paddingVertical: spacing.sm },
-  name: { fontWeight: '600', color: colors.textPrimary, fontSize: 14 },
-  due: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  removeLink: { color: colors.critical, fontSize: 12 },
-  input: { backgroundColor: colors.page, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 10, fontSize: 14 },
+  name: { fontFamily: fonts.bodySemibold, color: colors.textPrimary, fontSize: 14 },
+  due: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, marginTop: 2 },
+  removeLink: { color: colors.critical, fontFamily: fonts.bodyMedium, fontSize: 12 },
+  input: {
+    backgroundColor: colors.page,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 11,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 });
