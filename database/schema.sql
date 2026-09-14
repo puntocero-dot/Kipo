@@ -214,7 +214,49 @@ create table sync_log (
 -- Row Level Security (Supabase): cada usuario solo ve datos de su(s)
 -- familia(s) — el subselect puede devolver varias filas (varios espacios de
 -- trabajo) sin que estas políticas cambien.
+--
+-- Las funciones de abajo existen por una sola razón: evitar consultar
+-- `users` directo desde dentro de una política (sea de `users` mismo o de
+-- cualquier otra tabla). Si una política sobre `users` necesita volver a
+-- evaluarse a sí misma para decidir si una fila es visible, Postgres entra
+-- en "infinite recursion detected in policy for relation users". Al ser
+-- `security definer`, estas funciones corren como dueñas de la tabla (sin
+-- RLS de por medio) — mismo resultado, sin el ciclo.
 -- ---------------------------------------------------------------------------
+
+create or replace function my_family_ids()
+returns setof uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select family_id from users where auth_user_id = auth.uid();
+$$;
+
+create or replace function my_admin_family_ids()
+returns setof uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select family_id from users where auth_user_id = auth.uid() and role = 'admin';
+$$;
+
+create or replace function my_membership_ids()
+returns setof uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select id from users where auth_user_id = auth.uid();
+$$;
+
+grant execute on function my_family_ids() to authenticated;
+grant execute on function my_admin_family_ids() to authenticated;
+grant execute on function my_membership_ids() to authenticated;
 
 alter table transactions enable row level security;
 alter table budgets enable row level security;
@@ -230,52 +272,49 @@ alter table budget_alerts_log enable row level security;
 alter table sync_log enable row level security;
 
 create policy family_isolation_transactions on transactions
-  using (family_id in (select family_id from users where auth_user_id = auth.uid()));
+  using (family_id in (select my_family_ids()));
 
 create policy family_isolation_budgets on budgets
-  using (family_id in (select family_id from users where auth_user_id = auth.uid()));
+  using (family_id in (select my_family_ids()));
 
 create policy family_isolation_reminders on reminders
-  using (family_id in (select family_id from users where auth_user_id = auth.uid()));
+  using (family_id in (select my_family_ids()));
 
 create policy own_sms_inbox on sms_inbox
-  using (user_id in (select id from users where auth_user_id = auth.uid()));
+  using (user_id in (select my_membership_ids()));
 
 create policy members_see_own_families on families
-  for select using (id in (select family_id from users where auth_user_id = auth.uid()));
+  for select using (id in (select my_family_ids()));
 
 create policy admins_update_own_family on families
-  for update using (id in (select family_id from users where auth_user_id = auth.uid() and role = 'admin'));
+  for update using (id in (select my_admin_family_ids()));
 
 -- Sin policy de insert/update/delete a propósito: alta de membresía solo vía
 -- create_family_and_join/join_family_by_invite (security definer), nunca
 -- insertando family_id a mano desde el cliente.
 create policy members_see_peers on users
-  for select using (family_id in (select u.family_id from users u where u.auth_user_id = auth.uid()));
+  for select using (family_id in (select my_family_ids()));
 
 create policy users_update_own_row on users
   for update using (auth_user_id = auth.uid());
 
 create policy visible_categories on categories
-  for select using (family_id is null or family_id in (select family_id from users where auth_user_id = auth.uid()));
+  for select using (family_id is null or family_id in (select my_family_ids()));
 
 create policy family_isolation_accounts on accounts
-  using (family_id in (select family_id from users where auth_user_id = auth.uid()));
+  using (family_id in (select my_family_ids()));
 
 create policy family_isolation_categorization_rules on categorization_rules
-  using (family_id is null or family_id in (select family_id from users where auth_user_id = auth.uid()));
+  using (family_id is null or family_id in (select my_family_ids()));
 
 create policy own_devices on devices
-  using (user_id in (select id from users where auth_user_id = auth.uid()));
+  using (user_id in (select my_membership_ids()));
 
 create policy family_isolation_budget_alerts on budget_alerts_log
-  using (budget_id in (
-    select b.id from budgets b
-    where b.family_id in (select family_id from users where auth_user_id = auth.uid())
-  ));
+  using (budget_id in (select id from budgets where family_id in (select my_family_ids())));
 
 create policy family_isolation_sync_log on sync_log
-  using (family_id in (select family_id from users where auth_user_id = auth.uid()));
+  using (family_id in (select my_family_ids()));
 
 -- ---------------------------------------------------------------------------
 -- Alta de membresía (crear familia / unirse por código de invitación).
