@@ -362,16 +362,17 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       const sms = state.smsInbox.find((s) => s.id === id);
       if (!sms) return;
 
+      const isIncome = sms.transactionType === 'deposito';
       const transaction: Transaction = {
         id: Crypto.randomUUID(),
         userId: overrides.userId ?? membershipId,
-        type: 'gasto',
+        type: overrides.type ?? (isIncome ? 'ingreso' : 'gasto'),
         amount: overrides.amount ?? sms.parsedAmount ?? 0,
         currency: state.baseCurrency,
         groupSlug: overrides.groupSlug ?? null,
         subSlug: overrides.subSlug ?? null,
         merchant: overrides.merchant ?? sms.parsedMerchant,
-        description: overrides.description ?? sms.parsedMerchant ?? 'Compra con tarjeta',
+        description: overrides.description ?? sms.parsedMerchant ?? (isIncome ? 'Depósito bancario' : 'Compra con tarjeta'),
         rawText: sms.rawSms,
         source: 'sms',
         status: 'confirmado',
@@ -390,7 +391,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             id: transaction.id,
             family_id: familyId,
             user_id: transaction.userId,
-            type: 'gasto',
+            type: transaction.type,
             amount: transaction.amount,
             currency: transaction.currency,
             category_id: categoryIdFor(catMapsRef.current, transaction.groupSlug, transaction.subSlug),

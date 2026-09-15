@@ -135,7 +135,7 @@ create table sms_inbox (
   bank_pattern_id       text, -- id de la regla usada en smsParser.mjs, null = fallback genérico
   parsed_amount         numeric(12,2),
   parsed_merchant       text,
-  parsed_transaction_type text check (parsed_transaction_type in ('compra', 'retiro', 'pago')),
+  parsed_transaction_type text check (parsed_transaction_type in ('compra', 'retiro', 'pago', 'deposito')),
   confidence            text not null check (confidence in ('high', 'medium', 'low', 'none')),
   status                text not null default 'pendiente' check (status in ('pendiente', 'confirmado', 'descartado', 'duplicado')),
   matched_transaction_id uuid references transactions(id) on delete set null,

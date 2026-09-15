@@ -80,7 +80,7 @@ export interface SmsSuggestion {
   rawSms: string;
   parsedAmount: number | null;
   parsedMerchant: string | null;
-  transactionType: 'compra' | 'retiro' | 'pago';
+  transactionType: 'compra' | 'retiro' | 'pago' | 'deposito';
   confidence: Confidence;
   status: 'pendiente' | 'confirmado' | 'descartado';
   receivedAt: string;

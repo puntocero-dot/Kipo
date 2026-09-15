@@ -11,6 +11,7 @@ const SAMPLE_SMS = [
   'Compra aprobada por $28.00 en FARMACIA SAN JOSE el ' + new Date().toLocaleDateString('es-GT'),
   'Su tarjeta terminada en 7788 fue debitada por $54.30 en RESTAURANTE LA TERRAZA',
   'Retiro de $100.00 en cajero ATM CENTRO',
+  '*Davivienda Abono*\nCta:814\nConcep:PAGO DE PLANILLA\nFec:' + new Date().toLocaleDateString('es-GT') + '\nMonto:$450.00',
 ];
 
 export default function SmsInboxScreen() {
@@ -61,20 +62,31 @@ export default function SmsInboxScreen() {
         {pending.length === 0 ? (
           <EmptyState message="No hay sugerencias de SMS pendientes." />
         ) : (
-          pending.map((sms) => (
-            <View key={sms.id} style={styles.smsRow}>
-              <Text style={styles.smsRaw}>"{sms.rawSms}"</Text>
-              <View style={styles.smsMeta}>
-                <Text style={styles.smsAmount}>${sms.parsedAmount?.toFixed(2) ?? '—'}</Text>
-                <Text style={styles.smsMerchant}>{sms.parsedMerchant ?? 'Comercio no detectado'}</Text>
-                <Text style={styles.smsConfidence}>confianza: {sms.confidence}</Text>
+          pending.map((sms) => {
+            const isIncome = sms.transactionType === 'deposito';
+            return (
+              <View key={sms.id} style={styles.smsRow}>
+                <Text style={styles.smsRaw}>"{sms.rawSms}"</Text>
+                <View style={styles.smsMeta}>
+                  <Text style={[styles.smsAmount, isIncome && { color: colors.good }]}>
+                    {isIncome ? '+' : ''}${sms.parsedAmount?.toFixed(2) ?? '—'}
+                  </Text>
+                  <Text style={styles.smsMerchant}>{sms.parsedMerchant ?? 'Comercio no detectado'}</Text>
+                  {isIncome && (
+                    <View style={styles.depositBadge}>
+                      <Ionicons name="arrow-down-circle" size={12} color={colors.good} />
+                      <Text style={styles.depositBadgeText}>Depósito</Text>
+                    </View>
+                  )}
+                  <Text style={styles.smsConfidence}>confianza: {sms.confidence}</Text>
+                </View>
+                <View style={styles.smsActions}>
+                  <PrimaryButton label="Confirmar" onPress={() => setConfirmingId(sms.id)} />
+                  <SecondaryButton label="Descartar" tone="danger" onPress={() => discardSms(sms.id)} />
+                </View>
               </View>
-              <View style={styles.smsActions}>
-                <PrimaryButton label="Confirmar" onPress={() => setConfirmingId(sms.id)} />
-                <SecondaryButton label="Descartar" tone="danger" onPress={() => discardSms(sms.id)} />
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
       </Card>
 
@@ -89,7 +101,7 @@ export default function SmsInboxScreen() {
                 color={sms.status === 'confirmado' ? colors.good : colors.muted}
               />
               <Text style={styles.resolvedText}>
-                ${sms.parsedAmount?.toFixed(2) ?? '—'} · {sms.parsedMerchant ?? '—'}
+                {sms.transactionType === 'deposito' ? '+' : ''}${sms.parsedAmount?.toFixed(2) ?? '—'} · {sms.parsedMerchant ?? '—'}
               </Text>
             </View>
           ))}
@@ -99,6 +111,7 @@ export default function SmsInboxScreen() {
       <CategoryPickerModal
         visible={!!confirmingId}
         onClose={() => setConfirmingId(null)}
+        kind={state.smsInbox.find((s) => s.id === confirmingId)?.transactionType === 'deposito' ? 'ingreso' : 'gasto'}
         onSelect={(option) => {
           if (confirmingId) {
             const sms = state.smsInbox.find((s) => s.id === confirmingId);
@@ -135,6 +148,8 @@ const styles = StyleSheet.create({
   smsRaw: { fontFamily: fonts.body, fontSize: 12, color: colors.muted, fontStyle: 'italic' },
   smsMeta: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   smsAmount: { fontFamily: fonts.displaySemibold, fontSize: 15, color: colors.textPrimary },
+  depositBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.goodSoft, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  depositBadgeText: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.good },
   smsMerchant: { fontFamily: fonts.bodyMedium, color: colors.textSecondary, fontSize: 13, flex: 1 },
   smsConfidence: { fontFamily: fonts.body, fontSize: 11, color: colors.muted },
   smsActions: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
