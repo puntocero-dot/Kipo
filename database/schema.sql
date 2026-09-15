@@ -265,7 +265,16 @@ create table sync_log (
 -- RLS de por medio) — mismo resultado, sin el ciclo.
 -- ---------------------------------------------------------------------------
 
-create or replace function my_family_ids()
+-- Viven en `private`, no en `public`: PostgREST solo expone endpoints
+-- `/rest/v1/rpc/...` para funciones en schemas expuestos, y estas tres no
+-- son para que el cliente las llame directo — son puro apoyo de policies.
+-- `security definer` + schema no expuesto = siguen corriendo sin RLS de
+-- por medio (evitan la recursión) pero no quedan publicadas como RPC.
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
+
+create or replace function private.my_family_ids()
 returns setof uuid
 language sql
 security definer
@@ -275,7 +284,7 @@ as $$
   select family_id from users where auth_user_id = auth.uid();
 $$;
 
-create or replace function my_admin_family_ids()
+create or replace function private.my_admin_family_ids()
 returns setof uuid
 language sql
 security definer
@@ -285,7 +294,7 @@ as $$
   select family_id from users where auth_user_id = auth.uid() and role = 'admin';
 $$;
 
-create or replace function my_membership_ids()
+create or replace function private.my_membership_ids()
 returns setof uuid
 language sql
 security definer
@@ -295,9 +304,12 @@ as $$
   select id from users where auth_user_id = auth.uid();
 $$;
 
-grant execute on function my_family_ids() to authenticated;
-grant execute on function my_admin_family_ids() to authenticated;
-grant execute on function my_membership_ids() to authenticated;
+revoke execute on function private.my_family_ids() from public;
+revoke execute on function private.my_admin_family_ids() from public;
+revoke execute on function private.my_membership_ids() from public;
+grant execute on function private.my_family_ids() to authenticated;
+grant execute on function private.my_admin_family_ids() to authenticated;
+grant execute on function private.my_membership_ids() to authenticated;
 
 alter table transactions enable row level security;
 alter table budgets enable row level security;
@@ -314,31 +326,31 @@ alter table sync_log enable row level security;
 alter table savings_goals enable row level security;
 
 create policy family_isolation_transactions on transactions
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy family_isolation_budgets on budgets
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy family_isolation_savings_goals on savings_goals
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy family_isolation_reminders on reminders
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy own_sms_inbox on sms_inbox
-  using (user_id in (select my_membership_ids()));
+  using (user_id in (select private.my_membership_ids()));
 
 create policy members_see_own_families on families
-  for select using (id in (select my_family_ids()));
+  for select using (id in (select private.my_family_ids()));
 
 create policy admins_update_own_family on families
-  for update using (id in (select my_admin_family_ids()));
+  for update using (id in (select private.my_admin_family_ids()));
 
 -- Sin policy de insert/update/delete a propósito: alta de membresía solo vía
 -- create_family_and_join/join_family_by_invite (security definer), nunca
 -- insertando family_id a mano desde el cliente.
 create policy members_see_peers on users
-  for select using (family_id in (select my_family_ids()));
+  for select using (family_id in (select private.my_family_ids()));
 
 create policy users_update_own_row on users
   for update using (auth_user_id = auth.uid());
@@ -375,34 +387,34 @@ create trigger trg_prevent_users_privilege_escalation
 -- una sola policy sin `for` dejaba que cualquiera escribiera sobre el
 -- catálogo global compartido (ver migración 0006_security_hardening.sql).
 create policy select_categories on categories
-  for select using (family_id is null or family_id in (select my_family_ids()));
+  for select using (family_id is null or family_id in (select private.my_family_ids()));
 create policy insert_own_categories on categories
-  for insert with check (family_id in (select my_family_ids()));
+  for insert with check (family_id in (select private.my_family_ids()));
 create policy update_own_categories on categories
-  for update using (family_id in (select my_family_ids()));
+  for update using (family_id in (select private.my_family_ids()));
 create policy delete_own_categories on categories
-  for delete using (family_id in (select my_family_ids()));
+  for delete using (family_id in (select private.my_family_ids()));
 
 create policy family_isolation_accounts on accounts
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy select_categorization_rules on categorization_rules
-  for select using (family_id is null or family_id in (select my_family_ids()));
+  for select using (family_id is null or family_id in (select private.my_family_ids()));
 create policy insert_own_categorization_rules on categorization_rules
-  for insert with check (family_id in (select my_family_ids()));
+  for insert with check (family_id in (select private.my_family_ids()));
 create policy update_own_categorization_rules on categorization_rules
-  for update using (family_id in (select my_family_ids()));
+  for update using (family_id in (select private.my_family_ids()));
 create policy delete_own_categorization_rules on categorization_rules
-  for delete using (family_id in (select my_family_ids()));
+  for delete using (family_id in (select private.my_family_ids()));
 
 create policy own_devices on devices
-  using (user_id in (select my_membership_ids()));
+  using (user_id in (select private.my_membership_ids()));
 
 create policy family_isolation_budget_alerts on budget_alerts_log
-  using (budget_id in (select id from budgets where family_id in (select my_family_ids())));
+  using (budget_id in (select id from budgets where family_id in (select private.my_family_ids())));
 
 create policy family_isolation_sync_log on sync_log
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 -- ---------------------------------------------------------------------------
 -- Alta de membresía (crear familia / unirse por código de invitación).
@@ -467,5 +479,10 @@ begin
 end;
 $$;
 
+-- Sin acceso implícito para `anon` (el default de Postgres al crear una
+-- función es EXECUTE a PUBLIC) — ya validan auth.uid() adentro, esto es
+-- defensa en profundidad además de silenciar el warning del linter.
+revoke execute on function create_family_and_join(text, text) from public;
+revoke execute on function join_family_by_invite(text, text) from public;
 grant execute on function create_family_and_join(text, text) to authenticated;
 grant execute on function join_family_by_invite(text, text) to authenticated;
