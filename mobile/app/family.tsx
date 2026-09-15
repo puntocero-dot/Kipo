@@ -7,6 +7,7 @@ import { useAuth } from '../src/domain/authStore';
 import { useKipo } from '../src/domain/store';
 import { confirmAction, notify } from '../src/lib/confirm';
 import { pickAndUploadImage } from '../src/lib/imageUpload';
+import { shareInvite } from '../src/lib/inviteLink';
 import { isSupabaseConfigured } from '../src/lib/supabase';
 import { colors, fonts, radius, spacing } from '../src/theme';
 
@@ -169,12 +170,16 @@ export default function FamilyScreen() {
         <Card>
           <SectionTitle icon="share-social-outline">Invitar a alguien</SectionTitle>
           <Text style={styles.meta}>
-            No hay formulario para "agregar" a alguien directo — cada persona necesita su propia cuenta. Comparte este
-            código; en la pantalla de inicio eligen "Unirme con código" y quedan dentro al instante.
+            No hay formulario para "agregar" a alguien directo — cada persona necesita su propia cuenta. Comparte el
+            enlace; se abre directo en "Unirme con código", ya con el código puesto.
           </Text>
           <Text style={styles.inviteCode} selectable>
             {state.inviteCode}
           </Text>
+          <Pressable style={styles.shareButton} onPress={() => shareInvite(state.inviteCode, state.familyName)}>
+            <Ionicons name="share-outline" size={16} color="#fff" />
+            <Text style={styles.shareButtonText}>Compartir enlace</Text>
+          </Pressable>
         </Card>
       ) : (
         <Card>
@@ -290,4 +295,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.md,
   },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+  },
+  shareButtonText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 14 },
 });

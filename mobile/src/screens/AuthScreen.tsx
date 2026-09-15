@@ -99,7 +99,11 @@ export function AuthScreen() {
     <View style={styles.container}>
       <LoginBackdrop />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents={introDone ? 'auto' : 'none'}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, opacity: introDone ? 1 : 0 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        pointerEvents={introDone ? 'auto' : 'none'}
+      >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.hero}>
             <Text style={styles.heroWordmark}>Kipo</Text>

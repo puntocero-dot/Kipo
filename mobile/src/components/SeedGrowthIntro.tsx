@@ -9,18 +9,29 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 
 interface Props {
   onDone: () => void;
+  // La pantalla de login siempre respeta "reducir movimiento" del sistema —
+  // pero el botón "Ver animación" de /branding es un pedido explícito y
+  // puntual del dueño de la app, así que ahí se fuerza a reproducir de
+  // todas formas (si no, nunca podría verla en un dispositivo con esa
+  // preferencia activada).
+  forcePlay?: boolean;
 }
 
 const STEM_LENGTH = 140;
-const GROW_DURATION = 3200;
-const EXIT_DURATION = 350;
+// Más lento y con fases claramente separadas: primero crece la planta sola
+// (con una pausa al terminar para que se note que ya terminó esa etapa),
+// después la inundación verde, y solo al final — con la pantalla ya verde —
+// aparece el logo. Antes todo pasaba en 3.2s con la planta y el logo casi
+// superpuestos; ahora son ~6.3s con una secuencia perceptible.
+const GROW_DURATION = 6300;
+const EXIT_DURATION = 400;
 
 // Animación de una semilla que crece y llena la pantalla de verde — la
 // metáfora de "ir creciendo financieramente" que le da nombre a Kipo. Sin
 // react-native-reanimated/lottie/skia en el proyecto: se construye con
 // Animated (RN) + react-native-svg, ya instalados, mismo enfoque que el
 // hover-lift que ya existe en AuthScreen.tsx.
-export function SeedGrowthIntro({ onDone }: Props) {
+export function SeedGrowthIntro({ onDone, forcePlay = false }: Props) {
   const { height: screenH, width: screenW } = Dimensions.get('window');
   const progress = useRef(new Animated.Value(0)).current;
   const exitOpacity = useRef(new Animated.Value(1)).current;
@@ -40,12 +51,25 @@ export function SeedGrowthIntro({ onDone }: Props) {
       Animated.timing(progress, {
         toValue: 1,
         duration: GROW_DURATION,
-        easing: Easing.inOut(Easing.cubic),
+        // Lineal a propósito: las fases de abajo (planta, pausa, inundación,
+        // logo) están repartidas por fracción de tiempo transcurrido — un
+        // easing no lineal en este driver corría la inundación mucho antes
+        // de lo previsto (con inOut/cubic, al 62% del tiempo ya iba por
+        // ~78% de progreso). El "sentir" de cada etapa ya sale de sus
+        // propias curvas de interpolate, no hace falta acá también.
+        easing: Easing.linear,
         useNativeDriver: false,
       }).start(() => {
         if (!cancelled) finish(false);
       });
     };
+
+    if (forcePlay) {
+      runGrowth();
+      return () => {
+        cancelled = true;
+      };
+    }
 
     AccessibilityInfo.isReduceMotionEnabled?.()
       .then((reduceMotion) => {
@@ -61,7 +85,7 @@ export function SeedGrowthIntro({ onDone }: Props) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [forcePlay]);
 
   const skip = () => {
     if (skipped) return;
@@ -70,35 +94,49 @@ export function SeedGrowthIntro({ onDone }: Props) {
     Animated.timing(progress, { toValue: 1, duration: 200, useNativeDriver: false }).start(() => finish(false));
   };
 
-  const seedOpacity = progress.interpolate({ inputRange: [0, 0.08, 1], outputRange: [0, 1, 1], extrapolate: 'clamp' });
+  // Etapa 1 — la planta crece sola (0 → 0.62 del tiempo total).
+  const seedOpacity = progress.interpolate({ inputRange: [0, 0.05, 1], outputRange: [0, 1, 1], extrapolate: 'clamp' });
   const stemDashoffset = progress.interpolate({
-    inputRange: [0, 0.05, 0.45, 1],
+    inputRange: [0, 0.05, 0.42, 1],
     outputRange: [STEM_LENGTH, STEM_LENGTH, 0, 0],
     extrapolate: 'clamp',
   });
-  const leavesOpacity = progress.interpolate({ inputRange: [0, 0.35, 0.55, 1], outputRange: [0, 0, 1, 1], extrapolate: 'clamp' });
+  const leavesOpacity = progress.interpolate({ inputRange: [0, 0.34, 0.5, 1], outputRange: [0, 0, 1, 1], extrapolate: 'clamp' });
   const leavesTransform = progress.interpolate({
-    inputRange: [0.35, 0.55],
+    inputRange: [0.34, 0.5],
     outputRange: ['scale(0.4)', 'scale(1)'],
     extrapolate: 'clamp',
   });
+  // 0.5 → 0.62: pausa — la planta ya está completa y se queda quieta un
+  // momento antes de que arranque la inundación, para que se perciba como
+  // una etapa terminada y no un paso más de un mismo movimiento continuo.
+
+  // Etapa 2 — inundación verde (0.62 → 0.9).
   const floodMaxScale = Math.ceil((Math.max(screenH, screenW) * 2.4) / 24);
   const floodScale = progress.interpolate({
-    inputRange: [0.5, 0.88, 1],
+    inputRange: [0.62, 0.9, 1],
     outputRange: [0, floodMaxScale, floodMaxScale],
     extrapolate: 'clamp',
   });
-  const wordmarkOpacity = progress.interpolate({ inputRange: [0, 0.8, 1], outputRange: [0, 0, 1], extrapolate: 'clamp' });
+
+  // Etapa 3 — el logo aparece recién con la pantalla ya verde (0.88 → 1).
+  const wordmarkOpacity = progress.interpolate({ inputRange: [0, 0.88, 1], outputRange: [0, 0, 1], extrapolate: 'clamp' });
+
+  // La planta crece a un lado, no en el centro — la tarjeta de login (que
+  // ocupa casi todo el ancho en un teléfono) se oculta mientras dura la
+  // intro (ver AuthScreen.tsx: opacity 0 hasta introDone), así que este
+  // costado queda despejado de verdad, no apretado contra la tarjeta.
+  const plantLeft = screenW * 0.16;
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity: exitOpacity }]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={skip} accessibilityLabel="Saltar animación">
-        {/* Inundación verde: círculo pequeño anclado a la base que escala hasta cubrir toda la pantalla. */}
+        {/* Inundación verde: círculo pequeño anclado a la base de la planta que escala hasta cubrir toda la pantalla. */}
         <Animated.View
           style={[
             styles.flood,
             {
-              left: screenW / 2 - 12,
+              left: plantLeft + 28,
               bottom: screenH * 0.32 - 12,
               transform: [{ scale: floodScale }],
             },
@@ -110,13 +148,13 @@ export function SeedGrowthIntro({ onDone }: Props) {
         </Animated.View>
 
         <Svg
-          width={80}
+          width={64}
           height={STEM_LENGTH + 40}
-          viewBox={`0 0 80 ${STEM_LENGTH + 40}`}
-          style={[styles.plantWrap, { bottom: screenH * 0.28 }]}
+          viewBox="0 0 64 180"
+          style={[styles.plantWrap, { left: plantLeft, bottom: screenH * 0.28 }]}
         >
           <AnimatedPath
-            d={`M40 ${STEM_LENGTH + 40} L40 40`}
+            d={`M32 ${STEM_LENGTH + 40} L32 40`}
             stroke={colors.card}
             strokeWidth={4}
             strokeLinecap="round"
@@ -125,10 +163,10 @@ export function SeedGrowthIntro({ onDone }: Props) {
             fill="none"
           />
           <AnimatedG opacity={leavesOpacity} transform={leavesTransform}>
-            <Path d="M40 55 C 20 45, 10 55, 8 70 C 28 72, 38 65, 40 55 Z" fill={colors.gold} />
-            <Path d="M40 65 C 60 55, 70 65, 72 80 C 52 82, 42 75, 40 65 Z" fill={colors.gold} />
+            <Path d="M32 55 C 12 45, 2 55, 0 70 C 20 72, 30 65, 32 55 Z" fill={colors.gold} />
+            <Path d="M32 65 C 52 55, 62 65, 64 80 C 44 82, 34 75, 32 65 Z" fill={colors.gold} />
           </AnimatedG>
-          <AnimatedCircle cx={40} cy={STEM_LENGTH + 32} r={9} fill={colors.gold} opacity={seedOpacity} />
+          <AnimatedCircle cx={32} cy={STEM_LENGTH + 32} r={9} fill={colors.gold} opacity={seedOpacity} />
         </Svg>
       </Pressable>
     </Animated.View>
@@ -138,8 +176,11 @@ export function SeedGrowthIntro({ onDone }: Props) {
 const styles = StyleSheet.create({
   container: { alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   flood: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary },
-  plantWrap: { position: 'absolute', alignSelf: 'center' },
-  wordmarkWrap: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  plantWrap: { position: 'absolute' },
+  // `position:'absolute'` sin top/left explícitos ignora el alignItems/
+  // justifyContent del padre — con StyleSheet.absoluteFill (inset 0) sí
+  // ocupa toda la pantalla y ahí adentro el texto queda centrado de verdad.
+  wordmarkWrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   wordmark: {
     fontFamily: fonts.displayBlack,
     fontSize: 40,

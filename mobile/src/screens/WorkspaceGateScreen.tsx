@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as Linking from 'expo-linking';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../domain/authStore';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
@@ -9,12 +10,26 @@ import { colors, fonts, radius, shadow, spacing } from '../theme';
 // docs/TESTING_ENVIRONMENT.md y supabase/migrations/0003_multi_workspace_and_rls.sql.
 export function WorkspaceGateScreen() {
   const { memberships, loadingMemberships, selectFamily, createFamily, joinFamily, signOut } = useAuth();
+  const url = Linking.useURL();
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [memberName, setMemberName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // El enlace de "Compartir" en family.tsx manda a ?code=XXXX (ver
+  // shareInvite en lib/inviteLink.ts) — si alguien llega así, se abre
+  // directo en la pestaña "Unirme con código" con el código ya puesto, en
+  // vez de tener que pedirlo/escribirlo a mano.
+  useEffect(() => {
+    if (!url) return;
+    const codeFromUrl = new URL(url).searchParams.get('code');
+    if (codeFromUrl) {
+      setCode(codeFromUrl.toUpperCase());
+      setTab('join');
+    }
+  }, [url]);
 
   const submitCreate = async () => {
     if (!name.trim()) {

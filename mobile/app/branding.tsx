@@ -59,7 +59,8 @@ export default function BrandingScreen() {
   };
 
   return (
-    <Screen>
+    <View style={{ flex: 1 }}>
+      <Screen>
       <Card>
         <SectionTitle icon="color-wand-outline">Apariencia del login</SectionTitle>
         <Text style={styles.meta}>
@@ -109,17 +110,23 @@ export default function BrandingScreen() {
           </Pressable>
         </View>
       </Card>
+      </Screen>
 
       {previewOpen && (
+        // Fuera del <Screen> (un ScrollView) a propósito: absoluteFill ahí
+        // adentro se posiciona relativo al contenido scrolleable completo
+        // (más alto que la pantalla), no al viewport — la animación se veía
+        // mal recortada/desplazada. Como hermano del ScrollView, sí cubre
+        // exactamente lo visible.
         <View style={StyleSheet.absoluteFill}>
           <LoginBackdrop />
-          <SeedGrowthIntro onDone={() => setPreviewOpen(false)} />
+          <SeedGrowthIntro onDone={() => setPreviewOpen(false)} forcePlay />
           <Pressable style={styles.closePreview} onPress={() => setPreviewOpen(false)} hitSlop={12}>
             <Ionicons name="close" size={20} color="#fff" />
           </Pressable>
         </View>
       )}
-    </Screen>
+    </View>
   );
 }
 
