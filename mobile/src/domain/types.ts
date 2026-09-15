@@ -10,6 +10,13 @@ export interface FamilyMember {
   id: string;
   name: string;
   role: 'admin' | 'member' | 'child';
+  email?: string | null;
+  // 'suspended' pierde acceso a los datos de la familia al instante (ver
+  // my_family_ids() en database/schema.sql) — no es un borrado físico.
+  status?: 'active' | 'suspended';
+  // Color de acento de la vista propia de este usuario — null/undefined usa
+  // el verde de marca por defecto (colors.primary). Ver useAccentColor().
+  accentColor?: string | null;
 }
 
 export interface Transaction {
@@ -104,6 +111,7 @@ export interface CategorizationRule {
 
 export interface KipoState {
   familyName: string;
+  familyPhotoUrl: string | null;
   inviteCode: string;
   baseCurrency: string;
   members: FamilyMember[];

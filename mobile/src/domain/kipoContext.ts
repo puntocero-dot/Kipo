@@ -32,6 +32,17 @@ export interface KipoContextValue {
   // nextDueDate al ciclo anterior) — por si se tocó por error.
   undoReminderPayment: (id: string) => void;
   addMember: (member: Omit<FamilyMember, 'id'>) => void;
+  // Invalida el código actual y genera uno nuevo — solo un admin puede
+  // hacerlo (ver regenerate_invite_code() en Supabase / family.tsx).
+  regenerateInviteCode: () => void;
+  // Nombre/foto de familia — un admin edita, visibles para todos.
+  updateFamilyProfile: (patch: { name?: string; photoUrl?: string | null }) => void;
+  // Color de acento de la vista propia del usuario actual — self-service,
+  // sin permiso de admin.
+  setAccentColor: (color: string | null) => void;
+  // Suspende/reactiva a OTRO miembro — solo un admin puede hacerlo. No borra
+  // datos, solo revoca/restaura el acceso (ver users.status).
+  setMemberStatus: (memberId: string, status: 'active' | 'suspended') => void;
   addAccount: (account: Omit<Account, 'id'>) => void;
   removeAccount: (id: string) => void;
   addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'savedAmount'>) => void;
@@ -51,6 +62,7 @@ export function useKipo(): KipoContextValue {
 export function emptyKipoState(): KipoState {
   return {
     familyName: '',
+    familyPhotoUrl: null,
     inviteCode: '',
     baseCurrency: 'USD',
     members: [],

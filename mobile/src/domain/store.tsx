@@ -158,6 +158,8 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
           source: 'sms',
           status: 'confirmado',
           occurredAt: overrides.occurredAt ?? sms.receivedAt,
+          accountId: overrides.accountId ?? null,
+          budgetId: overrides.budgetId ?? null,
         };
         return {
           ...prev,
@@ -260,6 +262,38 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, members: [...prev.members, { ...member, id: makeId('user') }] }));
   }, []);
 
+  const regenerateInviteCode = useCallback(() => {
+    // Sin backend en modo local — solo para que el botón sea probable en
+    // este ambiente; mismo formato que genera Supabase.
+    const code = Math.random().toString(36).slice(2, 10).toUpperCase();
+    setState((prev) => ({ ...prev, inviteCode: code }));
+  }, []);
+
+  const updateFamilyProfile = useCallback((patch: { name?: string; photoUrl?: string | null }) => {
+    setState((prev) => ({
+      ...prev,
+      familyName: patch.name ?? prev.familyName,
+      familyPhotoUrl: patch.photoUrl !== undefined ? patch.photoUrl : prev.familyPhotoUrl,
+    }));
+  }, []);
+
+  const setAccentColor = useCallback(
+    (color: string | null) => {
+      setState((prev) => ({
+        ...prev,
+        members: prev.members.map((m) => (m.id === currentUserId ? { ...m, accentColor: color } : m)),
+      }));
+    },
+    [currentUserId],
+  );
+
+  const setMemberStatus = useCallback((memberId: string, status: 'active' | 'suspended') => {
+    setState((prev) => ({
+      ...prev,
+      members: prev.members.map((m) => (m.id === memberId ? { ...m, status } : m)),
+    }));
+  }, []);
+
   const addAccount = useCallback((account: Omit<Account, 'id'>) => {
     setState((prev) => ({ ...prev, accounts: [...prev.accounts, { ...account, id: makeId('acc') }] }));
   }, []);
@@ -312,6 +346,10 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       markReminderPaid,
       undoReminderPayment,
       addMember,
+      regenerateInviteCode,
+      updateFamilyProfile,
+      setAccentColor,
+      setMemberStatus,
       addAccount,
       removeAccount,
       addSavingsGoal,
@@ -338,6 +376,10 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       markReminderPaid,
       undoReminderPayment,
       addMember,
+      regenerateInviteCode,
+      updateFamilyProfile,
+      setAccentColor,
+      setMemberStatus,
       addAccount,
       removeAccount,
       addSavingsGoal,

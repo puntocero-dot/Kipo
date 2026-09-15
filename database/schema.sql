@@ -22,6 +22,8 @@ create table families (
   name          text not null,
   base_currency text not null default 'USD',
   invite_code   text unique not null,
+  -- Foto de familia (bucket `family-photos`), editable por un admin.
+  photo_url     text,
   created_at    timestamptz not null default now()
 );
 
@@ -36,6 +38,13 @@ create table users (
   display_name  text not null,
   email         text,
   role          text not null default 'member' check (role in ('admin', 'member', 'child')),
+  -- Color de acento de la vista propia de este usuario — null usa el verde
+  -- de marca por defecto (ver mobile/src/domain/accentStore.tsx).
+  accent_color  text,
+  -- 'suspended' pierde acceso a los datos de la familia en la siguiente
+  -- consulta (ver my_family_ids() más abajo) — solo un admin puede
+  -- cambiarlo, vía set_member_status(). No es un borrado físico.
+  status        text not null default 'active' check (status in ('active', 'suspended')),
   created_at    timestamptz not null default now()
 );
 
@@ -272,7 +281,7 @@ security definer
 stable
 set search_path = public
 as $$
-  select family_id from users where auth_user_id = auth.uid();
+  select family_id from users where auth_user_id = auth.uid() and status = 'active';
 $$;
 
 create or replace function my_admin_family_ids()
@@ -282,7 +291,7 @@ security definer
 stable
 set search_path = public
 as $$
-  select family_id from users where auth_user_id = auth.uid() and role = 'admin';
+  select family_id from users where auth_user_id = auth.uid() and role = 'admin' and status = 'active';
 $$;
 
 create or replace function my_membership_ids()
@@ -292,7 +301,7 @@ security definer
 stable
 set search_path = public
 as $$
-  select id from users where auth_user_id = auth.uid();
+  select id from users where auth_user_id = auth.uid() and status = 'active';
 $$;
 
 grant execute on function my_family_ids() to authenticated;
@@ -334,6 +343,28 @@ create policy members_see_own_families on families
 create policy admins_update_own_family on families
   for update using (id in (select my_admin_family_ids()));
 
+-- El invite_code solo debe cambiar vía regenerate_invite_code() (más abajo)
+-- — admins_update_own_family sigue permitiendo que un admin edite directo
+-- `name`/`base_currency`, pero este trigger bloquea que también ponga a
+-- mano cualquier valor en `invite_code` (ver migración
+-- 0012_regenerar_invite_code.sql).
+create or replace function prevent_direct_invite_code_change()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.invite_code is distinct from old.invite_code
+     and coalesce(current_setting('kipo.allow_invite_code_change', true), '') <> 'on' then
+    raise exception 'El código de invitación solo se puede cambiar con regenerate_invite_code().';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_prevent_direct_invite_code_change
+  before update on families
+  for each row execute function prevent_direct_invite_code_change();
+
 -- Sin policy de insert/update/delete a propósito: alta de membresía solo vía
 -- create_family_and_join/join_family_by_invite (security definer), nunca
 -- insertando family_id a mano desde el cliente.
@@ -361,6 +392,13 @@ begin
   end if;
   if new.auth_user_id is distinct from old.auth_user_id then
     raise exception 'No se puede reasignar la identidad de esta fila.';
+  end if;
+  -- El status solo debe cambiar vía set_member_status() (ver migración
+  -- 0013_suspender_miembro.sql) — mismo mecanismo de escape que los checks
+  -- de arriba.
+  if new.status is distinct from old.status
+     and coalesce(current_setting('kipo.allow_status_change', true), '') <> 'on' then
+    raise exception 'El estado de la membresía solo se puede cambiar con set_member_status().';
   end if;
   return new;
 end;
@@ -469,3 +507,174 @@ $$;
 
 grant execute on function create_family_and_join(text, text) to authenticated;
 grant execute on function join_family_by_invite(text, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Regenerar código de invitación (solo un admin de la familia).
+-- ---------------------------------------------------------------------------
+
+create or replace function regenerate_invite_code(target_family_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_code text;
+begin
+  if not exists (select 1 from my_admin_family_ids() f where f = target_family_id) then
+    raise exception 'Solo un administrador de la familia puede regenerar el código.';
+  end if;
+
+  loop
+    new_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+    exit when not exists (select 1 from families where invite_code = new_code);
+  end loop;
+
+  perform set_config('kipo.allow_invite_code_change', 'on', true);
+  update families set invite_code = new_code where id = target_family_id;
+
+  return new_code;
+end;
+$$;
+
+grant execute on function regenerate_invite_code(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Apariencia del login — solo el dueño de la app (identificado por una fila
+-- en app_owners, no un correo hardcodeado). La pantalla de login se ve SIN
+-- sesión, así que login_branding debe poder leerse por cualquiera.
+-- ---------------------------------------------------------------------------
+
+create table app_owners (
+  auth_user_id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+-- RLS activo + cero policies = nadie puede leer/escribir esta tabla vía la
+-- API — solo funciones security definer.
+alter table app_owners enable row level security;
+
+create or replace function is_app_owner()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (select 1 from app_owners where auth_user_id = auth.uid());
+$$;
+grant execute on function is_app_owner() to authenticated, anon;
+
+create table login_branding (
+  id                    boolean primary key default true check (id),
+  background_image_url  text,
+  gradient_colors       text[],
+  gradient_locations    numeric[],
+  updated_at            timestamptz not null default now()
+);
+insert into login_branding (id) values (true);
+
+alter table login_branding enable row level security;
+create policy anyone_can_read_login_branding on login_branding
+  for select using (true);
+-- Sin policy de insert/update/delete a propósito: solo vía save_login_branding().
+
+create or replace function save_login_branding(
+  new_background_image_url text,
+  new_gradient_colors text[],
+  new_gradient_locations numeric[]
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_app_owner() then
+    raise exception 'Solo el propietario de la app puede cambiar la apariencia del login.';
+  end if;
+  if new_gradient_colors is not null
+     and array_length(new_gradient_colors, 1) is distinct from array_length(new_gradient_locations, 1) then
+    raise exception 'gradient_colors y gradient_locations deben tener la misma longitud.';
+  end if;
+
+  update login_branding
+  set background_image_url = new_background_image_url,
+      gradient_colors = new_gradient_colors,
+      gradient_locations = new_gradient_locations,
+      updated_at = now()
+  where id = true;
+end;
+$$;
+
+grant execute on function save_login_branding(text, text[], numeric[]) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Suspender/reactivar a un miembro (solo un admin de su misma familia).
+-- ---------------------------------------------------------------------------
+
+create or replace function set_member_status(target_user_id uuid, new_status text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_family uuid;
+  caller_row uuid;
+begin
+  if new_status not in ('active', 'suspended') then
+    raise exception 'Estado inválido.';
+  end if;
+
+  select family_id into target_family from users where id = target_user_id;
+  if target_family is null then
+    raise exception 'Miembro no encontrado.';
+  end if;
+  if not exists (select 1 from my_admin_family_ids() f where f = target_family) then
+    raise exception 'Solo un administrador puede cambiar el estado de un miembro.';
+  end if;
+
+  select id into caller_row from users where auth_user_id = auth.uid() and family_id = target_family;
+  if caller_row = target_user_id then
+    raise exception 'No puedes suspenderte a ti mismo.';
+  end if;
+
+  perform set_config('kipo.allow_status_change', 'on', true);
+  update users set status = new_status where id = target_user_id;
+end;
+$$;
+
+grant execute on function set_member_status(uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Storage: fondo del login (`branding`, solo el dueño de la app) y foto de
+-- familia (`family-photos`, solo un admin de esa familia). Ambos buckets son
+-- públicos en lectura — `branding` debe verse sin sesión, y `family-photos`
+-- se queda dentro del mismo círculo de confianza que el resto de los datos
+-- de una familia (ver docs/SECURITY_AUDIT.md hallazgo #6).
+-- ---------------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public)
+values ('branding', 'branding', true)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('family-photos', 'family-photos', true)
+on conflict (id) do nothing;
+
+create policy branding_public_read on storage.objects
+  for select using (bucket_id = 'branding');
+create policy branding_owner_write on storage.objects
+  for insert to authenticated with check (bucket_id = 'branding' and is_app_owner());
+create policy branding_owner_update on storage.objects
+  for update to authenticated using (bucket_id = 'branding' and is_app_owner());
+
+-- Convención de ruta: family-photos/<family_id>/photo.jpg
+create policy family_photos_public_read on storage.objects
+  for select using (bucket_id = 'family-photos');
+create policy family_photos_admin_write on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'family-photos' and (storage.foldername(name))[1]::uuid in (select my_admin_family_ids()));
+create policy family_photos_admin_update on storage.objects
+  for update to authenticated
+  using (bucket_id = 'family-photos' and (storage.foldername(name))[1]::uuid in (select my_admin_family_ids()));

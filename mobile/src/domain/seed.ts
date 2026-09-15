@@ -240,14 +240,15 @@ function buildSeedSmsInbox(): SmsSuggestion[] {
 
 export function buildSeedState(): KipoState {
   const members: FamilyMember[] = [
-    { id: ANA, name: 'Ana Pérez', role: 'admin' },
-    { id: CARLOS, name: 'Carlos Pérez', role: 'member' },
+    { id: ANA, name: 'Ana Pérez', role: 'admin', status: 'active' },
+    { id: CARLOS, name: 'Carlos Pérez', role: 'member', status: 'active' },
   ];
 
   const accounts = buildSeedAccounts();
 
   return {
     familyName: 'Familia Pérez',
+    familyPhotoUrl: null,
     inviteCode: 'PEREZ2026',
     baseCurrency: 'USD',
     members,
