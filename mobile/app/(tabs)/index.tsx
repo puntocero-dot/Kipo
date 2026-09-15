@@ -3,18 +3,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BudgetBarRow } from '../../src/components/BudgetBarRow';
 import { DonutChart } from '../../src/components/DonutChart';
 import { MonthlyTrendChart } from '../../src/components/MonthlyTrendChart';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen, SectionTitle } from '../../src/components/ui';
-import { computeMacroDistribution, computeMonthlyTrend, computeMonthSummary, computeUpcomingReminders, daysUntil } from '../../src/domain/selectors';
+import {
+  computeBudgetUsage,
+  computeMacroDistribution,
+  computeMonthlyTrend,
+  computeMonthSummary,
+  computeUpcomingReminders,
+  daysUntil,
+} from '../../src/domain/selectors';
 import { useKipo } from '../../src/domain/store';
 import { colors, fonts, radius, shadow, spacing } from '../../src/theme';
 
 const MONTH_NAMES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
+
+const STATUS_RANK = { over: 2, warning: 1, ok: 0 } as const;
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -24,6 +34,10 @@ export default function DashboardScreen() {
   const summary = computeMonthSummary(state.transactions, now);
   const macro = computeMacroDistribution(state.transactions, now);
   const trend = computeMonthlyTrend(state.transactions, 6, now);
+  const budgetUsage = computeBudgetUsage(state.budgets, state.transactions, now);
+  const topBudgets = [...budgetUsage]
+    .sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status] || b.pct - a.pct)
+    .slice(0, 4);
   const upcoming = computeUpcomingReminders(state.reminders, 7, now);
   const latest = [...state.transactions]
     .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
@@ -65,6 +79,25 @@ export default function DashboardScreen() {
           </View>
           <Text style={styles.trackCaption}>{(usedPct * 100).toFixed(0)}% de tus ingresos ya se gastó este mes</Text>
         </LinearGradient>
+
+        <Card>
+          <SectionTitle
+            icon="wallet-outline"
+            right={
+              <Pressable style={styles.linkRow} onPress={() => router.push('/budgets')}>
+                <Text style={styles.link}>Ver todos</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              </Pressable>
+            }
+          >
+            Presupuestos
+          </SectionTitle>
+          {topBudgets.length === 0 ? (
+            <EmptyState icon="wallet-outline" message="Aún no has definido presupuestos." />
+          ) : (
+            topBudgets.map((b) => <BudgetBarRow key={b.id} budget={b} />)
+          )}
+        </Card>
 
         <Card>
           <SectionTitle icon="trending-up-outline">Evolución mensual</SectionTitle>

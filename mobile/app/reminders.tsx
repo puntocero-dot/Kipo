@@ -7,13 +7,23 @@ import { findCategory } from '../src/domain/categories';
 import { daysUntil, formatDayLabel } from '../src/domain/selectors';
 import { useKipo } from '../src/domain/store';
 import { confirmAction, notify } from '../src/lib/confirm';
+import type { Reminder } from '../src/domain/types';
 import { colors, fonts, radius, spacing } from '../src/theme';
+
+const RECURRENCE_OPTIONS: { label: string; value: Reminder['recurrence'] }[] = [
+  { label: 'Semanal', value: 'semanal' },
+  { label: 'Quincenal', value: 'quincenal' },
+  { label: 'Mensual', value: 'mensual' },
+  { label: 'Anual', value: 'anual' },
+  { label: 'Único', value: 'unico' },
+];
 
 export default function RemindersScreen() {
   const { state, addReminder, removeReminder, markReminderPaid, undoReminderPayment } = useKipo();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dueInDays, setDueInDays] = useState('');
+  const [recurrence, setRecurrence] = useState<Reminder['recurrence']>('mensual');
   const [groupSlug, setGroupSlug] = useState<string | null>(null);
   const [subSlug, setSubSlug] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -36,7 +46,7 @@ export default function RemindersScreen() {
     addReminder({
       name: name.trim(),
       amount: amount ? parseFloat(amount.replace(',', '.')) : null,
-      recurrence: 'mensual',
+      recurrence,
       nextDueDate: due.toISOString().slice(0, 10),
       notifyDaysBefore: 3,
       isActive: true,
@@ -50,6 +60,7 @@ export default function RemindersScreen() {
     setName('');
     setAmount('');
     setDueInDays('');
+    setRecurrence('mensual');
     setGroupSlug(null);
     setSubSlug(null);
   };
@@ -176,6 +187,18 @@ export default function RemindersScreen() {
           <Text style={styles.categoryPickerText}>{findCategory(groupSlug, subSlug)?.label ?? 'Categoría (opcional)'}</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.muted} />
         </Pressable>
+        <Text style={styles.recurrenceLabel}>¿Cada cuánto se repite?</Text>
+        <View style={[styles.chipsRow, { marginBottom: spacing.xs }]}>
+          {RECURRENCE_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.value}
+              onPress={() => setRecurrence(opt.value)}
+              style={[styles.chip, recurrence === opt.value && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, recurrence === opt.value && styles.chipTextActive]}>{opt.label}</Text>
+            </Pressable>
+          ))}
+        </View>
         <PrimaryButton label="Crear recordatorio" onPress={submit} />
       </Card>
 
@@ -249,4 +272,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   categoryPickerText: { fontFamily: fonts.bodyMedium, color: colors.textSecondary, fontSize: 13 },
+  recurrenceLabel: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
 });

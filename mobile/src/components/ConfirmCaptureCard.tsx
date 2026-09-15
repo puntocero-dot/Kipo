@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { categoryColor, findCategory } from '../domain/categories';
-import { formatDayLabel, formatTime } from '../domain/selectors';
+import { computeBudgetUsage, formatDayLabel, formatTime, resolveDefaultBudgetId } from '../domain/selectors';
 import { useKipo } from '../domain/store';
 import type { Transaction } from '../domain/types';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
+import { BudgetBarRow } from './BudgetBarRow';
 import { CategoryPickerModal } from './CategoryPickerModal';
 import { Pill } from './ui';
 
@@ -34,6 +35,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
   const [subSlug, setSubSlug] = useState(transaction.subSlug);
   const [occurredAt, setOccurredAt] = useState(transaction.occurredAt);
   const [accountId, setAccountId] = useState(transaction.accountId ?? null);
+  const [budgetId, setBudgetId] = useState<string | null>(transaction.budgetId ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const dayOffsetSelected = (offset: number) => {
@@ -46,6 +48,8 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
   const category = findCategory(groupSlug, subSlug);
   const color = categoryColor(groupSlug);
   const parsedAmount = parseFloat(amountText.replace(',', '.'));
+  const defaultBudgetId = resolveDefaultBudgetId(state.budgets, groupSlug);
+  const effectiveBudgetId = budgetId ?? defaultBudgetId;
   // Un ingreso no tiene categoría en este esquema (ver categoryDictionary.mjs,
   // 100% de gasto) — solo el gasto necesita una para poder guardarse.
   const canConfirm = !Number.isNaN(parsedAmount) && parsedAmount > 0 && (isIncome || !!groupSlug);
@@ -121,6 +125,44 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         </View>
       )}
 
+      {!isIncome && groupSlug && state.budgets.length > 0 && (
+        <View>
+          <Text style={styles.label}>¿A qué presupuesto afecta?</Text>
+          <View style={styles.dayChipsRow}>
+            {state.budgets.map((b) => (
+              <Pressable
+                key={b.id}
+                onPress={() => setBudgetId(b.id === defaultBudgetId ? null : b.id)}
+                style={[styles.dayChip, effectiveBudgetId === b.id && styles.dayChipActive]}
+              >
+                <Text style={[styles.dayChipText, effectiveBudgetId === b.id && styles.dayChipTextActive]}>
+                  {b.name}
+                  {b.id === defaultBudgetId ? ' (sugerido)' : ''}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {!isIncome &&
+        groupSlug &&
+        effectiveBudgetId &&
+        (() => {
+          const usage = computeBudgetUsage(state.budgets, state.transactions).find((u) => u.id === effectiveBudgetId);
+          if (!usage) return null;
+          const projectedSpent = usage.spent + (Number.isNaN(parsedAmount) ? 0 : parsedAmount);
+          const projectedPct = usage.amountLimit > 0 ? projectedSpent / usage.amountLimit : 0;
+          return (
+            <View style={styles.budgetPreview}>
+              <BudgetBarRow budget={usage} />
+              <Text style={styles.budgetPreviewCaption}>
+                Con este gasto: ${projectedSpent.toFixed(0)} / ${usage.amountLimit.toFixed(0)} ({(projectedPct * 100).toFixed(0)}%)
+              </Text>
+            </View>
+          );
+        })()}
+
       {!isIncome && !groupSlug && <Text style={styles.warning}>No pude adivinar la categoría — elige una para confirmar.</Text>}
       {Number.isNaN(parsedAmount) && <Text style={styles.warning}>No detecté un monto válido.</Text>}
 
@@ -128,7 +170,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         <Pressable
           style={[styles.confirmButton, !canConfirm && styles.disabled]}
           disabled={!canConfirm}
-          onPress={() => onConfirm({ amount: parsedAmount, groupSlug, subSlug, occurredAt, accountId })}
+          onPress={() => onConfirm({ amount: parsedAmount, groupSlug, subSlug, occurredAt, accountId, budgetId })}
         >
           <Text style={styles.confirmText}>Guardar</Text>
         </Pressable>
@@ -144,6 +186,7 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
         onSelect={(option) => {
           setGroupSlug(option.groupSlug);
           setSubSlug(option.subSlug);
+          setBudgetId(null); // la categoría cambió — no arrastrar un override que ya no aplica
           setPickerOpen(false);
         }}
       />
@@ -202,4 +245,6 @@ const styles = StyleSheet.create({
   discardButton: { paddingVertical: 11, paddingHorizontal: spacing.md, alignItems: 'center' },
   discardText: { color: colors.critical, fontFamily: fonts.bodySemibold, fontSize: 14 },
   disabled: { opacity: 0.4 },
+  budgetPreview: { backgroundColor: colors.page, borderRadius: radius.md, padding: spacing.sm, gap: 6 },
+  budgetPreviewCaption: { fontFamily: fonts.bodyMedium, fontSize: 11, color: colors.textSecondary },
 });

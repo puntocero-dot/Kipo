@@ -28,6 +28,14 @@ export interface Transaction {
   occurredAt: string;
   confidence?: Confidence;
   accountId?: string | null;
+  // Override explícito de a qué presupuesto afecta este gasto, independiente
+  // de su categoría (groupSlug/subSlug) — ver computeBudgetUsage. null/undefined
+  // = comportamiento implícito: se atribuye al presupuesto cuyo groupSlug
+  // coincide con esta transacción, como siempre. Un id explícito redirige el
+  // gasto a OTRO presupuesto sin cambiar su categoría (ej. gasolina de un
+  // viaje familiar sigue reportando como "Gasolina" pero cuenta contra
+  // "Vacaciones familiares" en vez del presupuesto normal de gasolina).
+  budgetId?: string | null;
 }
 
 export type AccountType = 'efectivo' | 'debito' | 'credito' | 'ahorros';
@@ -63,7 +71,7 @@ export interface Reminder {
   id: string;
   name: string;
   amount: number | null;
-  recurrence: 'mensual' | 'semanal' | 'anual' | 'unico';
+  recurrence: 'mensual' | 'semanal' | 'anual' | 'unico' | 'quincenal';
   nextDueDate: string; // fecha ISO (solo día)
   notifyDaysBefore: number;
   isActive: boolean;

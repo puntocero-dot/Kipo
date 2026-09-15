@@ -12,7 +12,7 @@
 // fallan (se documenta como pendiente, no se aparenta que funciona).
 import * as Crypto from 'expo-crypto';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { categoryIdFor, fetchCategoryMaps, KIND_TO_GROUP, type CategoryMaps } from './categoriesRemote';
+import { categoryIdFor, fetchCategoryMaps, GROUP_TO_KIND, KIND_TO_GROUP, type CategoryMaps } from './categoriesRemote';
 import { KipoContext, emptyKipoState, type KipoContextValue } from './kipoContext';
 import { supabase } from '../lib/supabase';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
@@ -37,6 +37,7 @@ function dbTransactionToApp(row: any, cats: CategoryMaps): Transaction {
     occurredAt: row.occurred_at,
     confidence: row.metadata?.confidence,
     accountId: row.account_id,
+    budgetId: row.budget_id ?? null,
   };
 }
 
@@ -258,6 +259,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       if (patch.merchant !== undefined) dbPatch.merchant = patch.merchant;
       if (patch.occurredAt !== undefined) dbPatch.occurred_at = patch.occurredAt;
       if (patch.accountId !== undefined) dbPatch.account_id = patch.accountId;
+      if (patch.budgetId !== undefined) dbPatch.budget_id = patch.budgetId;
       if (patch.groupSlug !== undefined || patch.subSlug !== undefined) {
         const tx = state.transactions.find((t) => t.id === id);
         dbPatch.category_id = categoryIdFor(
@@ -426,7 +428,11 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           .from('budgets')
           .insert({
             family_id: familyId,
-            category_kind: budget.groupSlug,
+            // category_kind en la DB es singular ('fijo', 'necesario'...) —
+            // budget.groupSlug es plural ('fijos', 'necesarios'...). Sin esta
+            // traducción, crear un presupuesto de "Gastos Fijos" o "Gastos
+            // Necesarios" viola el check constraint y falla en silencio.
+            category_kind: budget.groupSlug ? GROUP_TO_KIND[budget.groupSlug] ?? budget.groupSlug : null,
             name: budget.name,
             amount_limit: budget.amountLimit,
             alert_threshold_pct: budget.alertThresholdPct,
