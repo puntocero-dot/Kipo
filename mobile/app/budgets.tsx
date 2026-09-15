@@ -24,7 +24,15 @@ export default function BudgetsScreen() {
       notify('Datos incompletos', 'Ingresa un nombre y un límite mensual válido.');
       return;
     }
-    addBudget({ name: name.trim(), groupSlug: groupSlug === 'general' ? null : groupSlug, amountLimit, alertThresholdPct: 80 });
+    const isGeneral = groupSlug === 'general';
+    if (isGeneral && state.budgets.some((b) => b.groupSlug === null)) {
+      notify(
+        'Ya existe un presupuesto general',
+        'Solo puede haber un presupuesto general del mes a la vez — elige una categoría específica para este nuevo presupuesto.',
+      );
+      return;
+    }
+    addBudget({ name: name.trim(), groupSlug: isGeneral ? null : groupSlug, amountLimit, alertThresholdPct: 80 });
     setName('');
     setLimit('');
     setGroupSlug('general');

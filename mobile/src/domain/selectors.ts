@@ -79,19 +79,23 @@ export function computeBudgetUsage(
   reference = new Date(),
 ): BudgetUsage[] {
   const monthExpenses = monthTransactions(transactions, reference).filter((t) => t.type === 'gasto');
+  const specificGroupSlugs = new Set(budgets.filter((b) => b.groupSlug).map((b) => b.groupSlug));
 
   return budgets.map((budget) => {
     // Si la transacción tiene un budgetId explícito, gana sobre el match por
     // categoría — así un gasto puede reportar como "Gasolina" pero contar
     // contra "Vacaciones familiares" en vez del presupuesto normal de
-    // gasolina. El presupuesto general (groupSlug null) sigue sumando TODO
-    // el mes sin excepción — ya es un total agregado por diseño, redefinirlo
-    // como "solo lo no redirigido" sería un cambio de semántica no pedido.
+    // gasolina. El presupuesto general (groupSlug null) suma lo que NADIE
+    // más ya reclamó (ni un budgetId explícito hacia otro presupuesto, ni
+    // una categoría cubierta por un presupuesto específico) — así cada
+    // gasto cuenta hacia exactamente un presupuesto, nunca dos.
     const spent = budget.groupSlug
       ? monthExpenses
           .filter((t) => (t.budgetId ? t.budgetId === budget.id : t.groupSlug === budget.groupSlug))
           .reduce((s, t) => s + t.amount, 0)
-      : monthExpenses.reduce((s, t) => s + t.amount, 0);
+      : monthExpenses
+          .filter((t) => (t.budgetId ? t.budgetId === budget.id : !t.groupSlug || !specificGroupSlugs.has(t.groupSlug)))
+          .reduce((s, t) => s + t.amount, 0);
     const pct = budget.amountLimit > 0 ? spent / budget.amountLimit : 0;
     const status: BudgetUsage['status'] = pct >= 1 ? 'over' : pct >= budget.alertThresholdPct / 100 ? 'warning' : 'ok';
     return { ...budget, spent, pct, status };
