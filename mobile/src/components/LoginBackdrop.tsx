@@ -5,9 +5,12 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 // Gradiente original de la pantalla de login — usado como valor por
 // defecto mientras carga login_branding, si la fila no tiene datos aún, o
-// en modo local/demo (sin tabla que consultar).
+// en modo local/demo (sin tabla que consultar). Termina en el verde de
+// marca (no en tonos pálidos) para no verse lavado detrás de la tarjeta de
+// login (que ya tiene su propio blur claro), y para dar continuidad visual
+// con el verde que deja SeedGrowthIntro al terminar su animación.
 const DEFAULT_GRADIENT = {
-  colors: ['#7a3018', '#c9552b', '#e29255', '#cfc2a8', '#8fa6ad'],
+  colors: ['#7a3018', '#c9552b', '#e29255', '#1E6B5C', '#123F37'],
   locations: [0, 0.28, 0.5, 0.72, 1],
 };
 
