@@ -9,6 +9,7 @@ import { MonthlyTrendChart } from '../../src/components/MonthlyTrendChart';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen, SectionTitle } from '../../src/components/ui';
+import { useAccentColor } from '../../src/domain/accentStore';
 import {
   computeBudgetUsage,
   computeMacroDistribution,
@@ -29,6 +30,7 @@ const STATUS_RANK = { over: 2, warning: 1, ok: 0 } as const;
 export default function DashboardScreen() {
   const router = useRouter();
   const { state } = useKipo();
+  const accent = useAccentColor();
   const now = new Date();
 
   const summary = computeMonthSummary(state.transactions, now);
@@ -55,7 +57,7 @@ export default function DashboardScreen() {
         </View>
 
         <LinearGradient
-          colors={[colors.primary, colors.primaryDeep]}
+          colors={[accent, colors.primaryDeep]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}

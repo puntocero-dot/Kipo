@@ -35,6 +35,10 @@ interface AuthContextValue {
   joinFamily: (code: string, memberName: string) => Promise<string | null>;
   selectFamily: (familyId: string) => void;
   clearActiveFamily: () => void;
+  // Vuelve a leer memberships (nombre de familia, rol) — útil después de
+  // renombrar la familia, para que el nombre cacheado aquí (usado en
+  // more.tsx) no quede obsoleto.
+  refreshMemberships: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -160,6 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const activeMembership = memberships.find((m) => m.familyId === activeFamilyId) ?? null;
 
+  const refreshMemberships = useCallback(async () => {
+    if (session) await loadMemberships(session.user.id);
+  }, [session, loadMemberships]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       ready,
@@ -175,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       joinFamily,
       selectFamily,
       clearActiveFamily,
+      refreshMemberships,
     }),
     [
       ready,
@@ -190,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       joinFamily,
       selectFamily,
       clearActiveFamily,
+      refreshMemberships,
     ],
   );
 

@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { Card, Screen, SectionTitle } from '../../src/components/ui';
 import { useAuth } from '../../src/domain/authStore';
+import { useIsAppOwner } from '../../src/domain/ownerStore';
 import { useKipo } from '../../src/domain/store';
 import { confirmAction } from '../../src/lib/confirm';
 import { isSupabaseConfigured } from '../../src/lib/supabase';
@@ -42,6 +43,7 @@ export default function MoreScreen() {
   // únicamente cuando isSupabaseConfigured es true — por eso el hook se
   // llama condicionado a esa misma constante, nunca al revés.
   const auth = isSupabaseConfigured ? useAuth() : null;
+  const isAppOwner = useIsAppOwner();
 
   return (
     <TabScreenGuard>
@@ -71,6 +73,14 @@ export default function MoreScreen() {
           description="Miembros, moneda, código de invitación"
           onPress={() => router.push('/family')}
         />
+        {isAppOwner && (
+          <MenuRow
+            icon="color-wand-outline"
+            label="Apariencia del login"
+            description="Fondo y colores que ve todo el mundo al abrir Kipo"
+            onPress={() => router.push('/branding')}
+          />
+        )}
       </Card>
 
       {auth ? (

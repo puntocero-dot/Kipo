@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { useAccentColor } from '../domain/accentStore';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 export function Screen({ children }: { children: React.ReactNode }) {
@@ -53,11 +54,17 @@ export function Pill({ label, color, textColor }: { label: string; color: string
 }
 
 export function PrimaryButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const accent = useAccentColor();
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [styles.primaryButton, disabled && styles.disabled, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.primaryButton,
+        { backgroundColor: accent, shadowColor: accent },
+        disabled && styles.disabled,
+        pressed && styles.pressed,
+      ]}
     >
       <Text style={styles.primaryButtonText}>{label}</Text>
     </Pressable>

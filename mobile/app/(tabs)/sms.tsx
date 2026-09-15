@@ -1,11 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BudgetOverridePicker } from '../../src/components/BudgetOverridePicker';
 import { CategoryPickerModal } from '../../src/components/CategoryPickerModal';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { Card, EmptyState, PrimaryButton, Screen, SecondaryButton, SectionTitle } from '../../src/components/ui';
 import { useKipo } from '../../src/domain/store';
 import { colors, fonts, radius, spacing } from '../../src/theme';
+
+interface SmsDraft {
+  smsId: string;
+  groupSlug: string;
+  subSlug: string;
+  budgetId: string | null;
+}
 
 const SAMPLE_SMS = [
   'Compra aprobada por $28.00 en FARMACIA SAN JOSE el ' + new Date().toLocaleDateString('es-GT'),
@@ -18,6 +26,8 @@ export default function SmsInboxScreen() {
   const { state, simulateIncomingSms, confirmSms, discardSms } = useKipo();
   const [customSms, setCustomSms] = useState('');
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<SmsDraft | null>(null);
+  const draftSms = draft ? state.smsInbox.find((s) => s.id === draft.smsId) : undefined;
 
   const pending = state.smsInbox.filter((s) => s.status === 'pendiente');
   const resolved = state.smsInbox.filter((s) => s.status !== 'pendiente').slice(0, 5);
@@ -108,6 +118,33 @@ export default function SmsInboxScreen() {
         </Card>
       )}
 
+      {draft && draftSms && (
+        <Card>
+          <SectionTitle icon="wallet-outline">¿Dónde se registra este gasto?</SectionTitle>
+          <BudgetOverridePicker
+            groupSlug={draft.groupSlug}
+            amount={draftSms.parsedAmount ?? 0}
+            value={draft.budgetId}
+            onChange={(budgetId) => setDraft((d) => (d ? { ...d, budgetId } : d))}
+          />
+          <View style={styles.smsActions}>
+            <PrimaryButton
+              label="Guardar"
+              onPress={() => {
+                confirmSms(draft.smsId, {
+                  groupSlug: draft.groupSlug,
+                  subSlug: draft.subSlug,
+                  budgetId: draft.budgetId,
+                  description: draftSms.parsedMerchant ?? undefined,
+                });
+                setDraft(null);
+              }}
+            />
+            <SecondaryButton label="Cancelar" onPress={() => setDraft(null)} />
+          </View>
+        </Card>
+      )}
+
       <CategoryPickerModal
         visible={!!confirmingId}
         onClose={() => setConfirmingId(null)}
@@ -115,11 +152,17 @@ export default function SmsInboxScreen() {
         onSelect={(option) => {
           if (confirmingId) {
             const sms = state.smsInbox.find((s) => s.id === confirmingId);
-            confirmSms(confirmingId, {
-              groupSlug: option.groupSlug,
-              subSlug: option.subSlug,
-              description: sms?.parsedMerchant ?? undefined,
-            });
+            if (sms?.transactionType === 'deposito') {
+              // Un ingreso no tiene presupuesto que afectar — se confirma directo,
+              // igual que antes.
+              confirmSms(confirmingId, {
+                groupSlug: option.groupSlug,
+                subSlug: option.subSlug,
+                description: sms?.parsedMerchant ?? undefined,
+              });
+            } else {
+              setDraft({ smsId: confirmingId, groupSlug: option.groupSlug, subSlug: option.subSlug, budgetId: null });
+            }
           }
           setConfirmingId(null);
         }}

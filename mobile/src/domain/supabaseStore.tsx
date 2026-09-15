@@ -123,8 +123,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     catMapsRef.current = cats;
 
     const [familyRes, membersRes, txRes, budgetsRes, remindersRes, smsRes, rulesRes, accountsRes, goalsRes] = await Promise.all([
-      supabase!.from('families').select('name, invite_code, base_currency').eq('id', familyId).single(),
-      supabase!.from('users').select('id, display_name, role').eq('family_id', familyId),
+      supabase!.from('families').select('name, invite_code, base_currency, photo_url').eq('id', familyId).single(),
+      supabase!.from('users').select('id, display_name, role, email, status, accent_color').eq('family_id', familyId),
       supabase!.from('transactions').select('*').eq('family_id', familyId).order('occurred_at', { ascending: false }),
       supabase!.from('budgets').select('*').eq('family_id', familyId),
       supabase!.from('reminders').select('*').eq('family_id', familyId),
@@ -134,7 +134,14 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       supabase!.from('savings_goals').select('*').eq('family_id', familyId),
     ]);
 
-    const members: FamilyMember[] = (membersRes.data ?? []).map((r: any) => ({ id: r.id, name: r.display_name, role: r.role }));
+    const members: FamilyMember[] = (membersRes.data ?? []).map((r: any) => ({
+      id: r.id,
+      name: r.display_name,
+      role: r.role,
+      email: r.email,
+      status: r.status ?? 'active',
+      accentColor: r.accent_color ?? null,
+    }));
     const transactions = (txRes.data ?? []).map((r: any) => dbTransactionToApp(r, cats));
     const budgets = (budgetsRes.data ?? []).map(dbBudgetToApp);
     const reminders = (remindersRes.data ?? []).map((r: any) => dbReminderToApp(r, cats));
@@ -150,6 +157,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
 
     setState({
       familyName: familyRes.data?.name ?? 'Mi espacio',
+      familyPhotoUrl: familyRes.data?.photo_url ?? null,
       inviteCode: familyRes.data?.invite_code ?? '',
       baseCurrency: familyRes.data?.base_currency ?? 'USD',
       members,
@@ -379,6 +387,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
         source: 'sms',
         status: 'confirmado',
         occurredAt: overrides.occurredAt ?? sms.receivedAt,
+        accountId: overrides.accountId ?? null,
+        budgetId: overrides.budgetId ?? null,
       };
       setState((prev) => ({
         ...prev,
@@ -393,6 +403,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             id: transaction.id,
             family_id: familyId,
             user_id: transaction.userId,
+            account_id: transaction.accountId,
+            budget_id: transaction.budgetId,
             type: transaction.type,
             amount: transaction.amount,
             currency: transaction.currency,
@@ -586,6 +598,61 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     console.warn('addMember: en modo Supabase, comparte el código de invitación en vez de agregar miembros directo.');
   }, []);
 
+  const regenerateInviteCode = useCallback(() => {
+    (async () => {
+      const { data, error } = await supabase!.rpc('regenerate_invite_code', { target_family_id: familyId });
+      if (!error && data) {
+        setState((prev) => ({ ...prev, inviteCode: data as string }));
+      }
+    })();
+  }, [familyId]);
+
+  const updateFamilyProfile = useCallback(
+    (patch: { name?: string; photoUrl?: string | null }) => {
+      setState((prev) => ({
+        ...prev,
+        familyName: patch.name ?? prev.familyName,
+        familyPhotoUrl: patch.photoUrl !== undefined ? patch.photoUrl : prev.familyPhotoUrl,
+      }));
+      const dbPatch: Record<string, unknown> = {};
+      if (patch.name !== undefined) dbPatch.name = patch.name;
+      if (patch.photoUrl !== undefined) dbPatch.photo_url = patch.photoUrl;
+      if (Object.keys(dbPatch).length > 0) {
+        supabase!.from('families').update(dbPatch).eq('id', familyId).then();
+      }
+    },
+    [familyId],
+  );
+
+  const setAccentColor = useCallback(
+    (color: string | null) => {
+      setState((prev) => ({
+        ...prev,
+        members: prev.members.map((m) => (m.id === membershipId ? { ...m, accentColor: color } : m)),
+      }));
+      supabase!.from('users').update({ accent_color: color }).eq('id', membershipId).then();
+    },
+    [membershipId],
+  );
+
+  const setMemberStatus = useCallback((memberId: string, status: 'active' | 'suspended') => {
+    setState((prev) => ({
+      ...prev,
+      members: prev.members.map((m) => (m.id === memberId ? { ...m, status } : m)),
+    }));
+    (async () => {
+      const { error } = await supabase!.rpc('set_member_status', { target_user_id: memberId, new_status: status });
+      if (error) {
+        // Revertir el optimista si el servidor lo rechazó (ej. intentar
+        // suspenderse a sí mismo, o no ser admin).
+        setState((prev) => ({
+          ...prev,
+          members: prev.members.map((m) => (m.id === memberId ? { ...m, status: status === 'active' ? 'suspended' : 'active' } : m)),
+        }));
+      }
+    })();
+  }, []);
+
   const addAccount = useCallback(
     (account: Omit<Account, 'id'>) => {
       (async () => {
@@ -679,6 +746,10 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       markReminderPaid,
       undoReminderPayment,
       addMember,
+      regenerateInviteCode,
+      updateFamilyProfile,
+      setAccentColor,
+      setMemberStatus,
       addAccount,
       removeAccount,
       addSavingsGoal,
@@ -706,6 +777,10 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       markReminderPaid,
       undoReminderPayment,
       addMember,
+      regenerateInviteCode,
+      updateFamilyProfile,
+      setAccentColor,
+      setMemberStatus,
       addAccount,
       removeAccount,
       addSavingsGoal,

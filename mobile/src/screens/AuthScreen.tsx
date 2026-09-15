@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +13,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { LoginBackdrop } from '../components/LoginBackdrop';
+import { SeedGrowthIntro } from '../components/SeedGrowthIntro';
 import { TermsModal } from '../components/TermsModal';
 import { useAuth } from '../domain/authStore';
 import { colors, fonts, radius, spacing } from '../theme';
@@ -36,6 +37,7 @@ const PASSWORD_RULES: PasswordRule[] = [
 
 export function AuthScreen() {
   const { signIn, signUp } = useAuth();
+  const [introDone, setIntroDone] = useState(false);
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,13 +97,9 @@ export function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#7a3018', '#c9552b', '#e29255', '#cfc2a8', '#8fa6ad']}
-        locations={[0, 0.28, 0.5, 0.72, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      <LoginBackdrop />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents={introDone ? 'auto' : 'none'}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.hero}>
             <Text style={styles.heroWordmark}>Kipo</Text>
@@ -229,6 +227,8 @@ export function AuthScreen() {
       </KeyboardAvoidingView>
 
       <TermsModal visible={termsModalOpen} onClose={() => setTermsModalOpen(false)} />
+
+      {!introDone && <SeedGrowthIntro onDone={() => setIntroDone(true)} />}
     </View>
   );
 }
