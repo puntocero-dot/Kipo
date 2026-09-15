@@ -28,7 +28,7 @@ interface AuthContextValue {
   loadingMemberships: boolean;
   activeFamilyId: string | null;
   activeMembership: Membership | null;
-  signUp: (email: string, password: string) => Promise<string | null>;
+  signUp: (email: string, password: string, termsAccepted: boolean) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   createFamily: (name: string) => Promise<string | null>;
@@ -104,8 +104,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, [loadMemberships]);
 
-  const signUp = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase!.auth.signUp({ email, password });
+  const signUp = useCallback(async (email: string, password: string, termsAccepted: boolean) => {
+    // La aceptación queda en los metadatos del usuario de auth (sin migración
+    // extra) — un registro real de cuándo aceptó, no solo un checkbox que se
+    // olvida en cuanto se envía el formulario.
+    const { error } = await supabase!.auth.signUp({
+      email,
+      password,
+      options: { data: { terms_accepted_at: termsAccepted ? new Date().toISOString() : null } },
+    });
     return error?.message ?? null;
   }, []);
 
