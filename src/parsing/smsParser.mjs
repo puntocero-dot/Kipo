@@ -17,6 +17,16 @@ import { extractAmount } from './expenseTextParser.mjs';
 
 const BANK_PATTERNS = [
   {
+    id: 'abono_generico',
+    // "*Davivienda Abono*\nCta:814\nCta.O.:******\nConcep:2Q PAGA VACACION SEP\n
+    //  Fec:14/09/26 16:05:06\nMonto:$1060.79\n-Si NO la reconoce llamar al..."
+    // — un depósito/abono, no un cargo: sin este patrón caía en el fallback
+    // genérico, que asume "compra" (gasto) para cualquier SMS que no matchee
+    // nada, así que un depósito real se registraba como un gasto.
+    regex: /abono[\s\S]*?concep\s*:?\s*([^\n]+)[\s\S]*?monto\s*:?\s*\$?\s*([\d.,]+)/i,
+    map: (m) => ({ amount: parseFloat(m[2].replace(',', '.')), merchant: m[1].trim(), type: 'deposito' }),
+  },
+  {
     id: 'compra_aprobada_generico',
     // "Compra aprobada por $45.00 en RESTAURANTE EL SABOR el 02/09"
     regex: /compra\s+(?:aprobada\s+)?por\s+\$?\s*([\d.,]+)\s+en\s+([A-Z0-9ÁÉÍÓÚÑ.\s]+?)(?:\s+el\s+(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?))?(?:\s+aprobada)?\.?$/i,
@@ -68,7 +78,7 @@ export function parseBankSms(rawSms, { now = new Date() } = {}) {
     amount,
     merchant: upperWordsMatch ? normalizeMerchant(upperWordsMatch[1]) : null,
     card_last4: null,
-    transaction_type: /retiro/i.test(rawSms) ? 'retiro' : 'compra',
+    transaction_type: /retiro/i.test(rawSms) ? 'retiro' : /abono|dep[oó]sito/i.test(rawSms) ? 'deposito' : 'compra',
     occurred_at: now.toISOString(),
     confidence: amount !== null ? 'low' : 'none',
   };

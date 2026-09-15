@@ -143,16 +143,17 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => {
         const sms = prev.smsInbox.find((s) => s.id === id);
         if (!sms) return prev;
+        const isIncome = sms.transactionType === 'deposito';
         const transaction: Transaction = {
           id: makeId('tx'),
           userId: overrides.userId ?? currentUserId,
-          type: 'gasto',
+          type: overrides.type ?? (isIncome ? 'ingreso' : 'gasto'),
           amount: overrides.amount ?? sms.parsedAmount ?? 0,
           currency: prev.baseCurrency,
           groupSlug: overrides.groupSlug ?? null,
           subSlug: overrides.subSlug ?? null,
           merchant: overrides.merchant ?? sms.parsedMerchant,
-          description: overrides.description ?? sms.parsedMerchant ?? 'Compra con tarjeta',
+          description: overrides.description ?? sms.parsedMerchant ?? (isIncome ? 'Depósito bancario' : 'Compra con tarjeta'),
           rawText: sms.rawSms,
           source: 'sms',
           status: 'confirmado',
