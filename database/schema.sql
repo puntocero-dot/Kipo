@@ -104,6 +104,12 @@ create table transactions (
   user_id         uuid not null references users(id) on delete cascade, -- quién lo registró
   account_id      uuid references accounts(id) on delete set null,
   category_id     uuid references categories(id) on delete set null,
+  -- Override explícito de a qué presupuesto afecta este gasto, independiente
+  -- de category_id — ver computeBudgetUsage en mobile/src/domain/selectors.ts.
+  -- null = se atribuye por category_kind coincidente (comportamiento de siempre).
+  -- FK agregada más abajo (alter table) porque `budgets` se define después
+  -- de `transactions` en este archivo.
+  budget_id       uuid,
   type            text not null default 'gasto' check (type in ('gasto', 'ingreso')),
   amount          numeric(12,2) not null check (amount >= 0),
   currency        text not null default 'USD',
@@ -165,6 +171,12 @@ create table budgets (
   created_at      timestamptz not null default now()
 );
 
+-- FK de transactions.budget_id agregada aquí (no inline arriba) porque
+-- `budgets` se define después de `transactions` en este archivo.
+alter table transactions add constraint transactions_budget_id_fkey
+  foreign key (budget_id) references budgets(id) on delete set null;
+create index idx_transactions_budget on transactions (budget_id) where budget_id is not null;
+
 -- Evita reenviar la misma alerta dos veces dentro del mismo período.
 create table budget_alerts_log (
   id            uuid primary key default gen_random_uuid(),
@@ -186,7 +198,7 @@ create table reminders (
   account_id        uuid references accounts(id) on delete set null, -- medio de pago habitual
   name              text not null, -- ej. "Internet", "Colegiatura", "Tarjeta de crédito"
   amount            numeric(12,2),
-  recurrence        text not null default 'mensual' check (recurrence in ('mensual', 'semanal', 'anual', 'unico')),
+  recurrence        text not null default 'mensual' check (recurrence in ('mensual', 'semanal', 'anual', 'unico', 'quincenal')),
   due_day_of_month  int check (due_day_of_month between 1 and 31),
   next_due_date     date not null,
   notify_days_before int not null default 3,

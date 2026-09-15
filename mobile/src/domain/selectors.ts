@@ -81,13 +81,30 @@ export function computeBudgetUsage(
   const monthExpenses = monthTransactions(transactions, reference).filter((t) => t.type === 'gasto');
 
   return budgets.map((budget) => {
+    // Si la transacción tiene un budgetId explícito, gana sobre el match por
+    // categoría — así un gasto puede reportar como "Gasolina" pero contar
+    // contra "Vacaciones familiares" en vez del presupuesto normal de
+    // gasolina. El presupuesto general (groupSlug null) sigue sumando TODO
+    // el mes sin excepción — ya es un total agregado por diseño, redefinirlo
+    // como "solo lo no redirigido" sería un cambio de semántica no pedido.
     const spent = budget.groupSlug
-      ? monthExpenses.filter((t) => t.groupSlug === budget.groupSlug).reduce((s, t) => s + t.amount, 0)
+      ? monthExpenses
+          .filter((t) => (t.budgetId ? t.budgetId === budget.id : t.groupSlug === budget.groupSlug))
+          .reduce((s, t) => s + t.amount, 0)
       : monthExpenses.reduce((s, t) => s + t.amount, 0);
     const pct = budget.amountLimit > 0 ? spent / budget.amountLimit : 0;
     const status: BudgetUsage['status'] = pct >= 1 ? 'over' : pct >= budget.alertThresholdPct / 100 ? 'warning' : 'ok';
     return { ...budget, spent, pct, status };
   });
+}
+
+// Presupuesto que aplicaría por defecto a esta categoría si no se elige uno
+// explícito — primer presupuesto cuyo groupSlug coincide; si no existe, cae
+// al presupuesto general (groupSlug null); si tampoco existe, no hay default.
+export function resolveDefaultBudgetId(budgets: Budget[], groupSlug: string | null): string | null {
+  const specific = groupSlug ? budgets.find((b) => b.groupSlug === groupSlug) : undefined;
+  if (specific) return specific.id;
+  return budgets.find((b) => b.groupSlug === null)?.id ?? null;
 }
 
 export function computeUpcomingReminders(reminders: Reminder[], withinDays = 7, reference = new Date()): Reminder[] {
@@ -111,6 +128,9 @@ export function shiftByRecurrence(dateIso: string, recurrence: Reminder['recurre
   switch (recurrence) {
     case 'semanal':
       d.setDate(d.getDate() + 7 * direction);
+      break;
+    case 'quincenal':
+      d.setDate(d.getDate() + 15 * direction);
       break;
     case 'mensual':
       d.setMonth(d.getMonth() + 1 * direction);
