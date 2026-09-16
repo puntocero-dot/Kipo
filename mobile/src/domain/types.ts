@@ -2,6 +2,8 @@
 // (ver docs/DATABASE_SCHEMA.md). `groupSlug`/`subSlug` corresponden a
 // categories.kind/slug una vez migrado a Postgres.
 
+import type { CategoryOption } from './categories';
+
 export type TransactionSource = 'chat' | 'voz' | 'sms' | 'manual' | 'recurrente';
 export type TransactionStatus = 'confirmado' | 'pendiente';
 export type Confidence = 'high' | 'medium' | 'low' | 'none';
@@ -122,4 +124,8 @@ export interface KipoState {
   categorizationRules: CategorizationRule[];
   accounts: Account[];
   savingsGoals: SavingsGoal[];
+  // Subcategorías agregadas por esta familia (dentro de un grupo macro ya
+  // existente) — se muestran junto a CATEGORY_OPTIONS en el picker. Ver
+  // addCustomCategory en kipoContext.ts.
+  customCategories: CategoryOption[];
 }

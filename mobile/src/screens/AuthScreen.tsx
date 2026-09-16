@@ -99,6 +99,14 @@ export function AuthScreen() {
     <View style={styles.container}>
       <LoginBackdrop />
 
+      {/* Antes/durante la intro, la tarjeta de abajo está en opacity 0, así
+          que no importa que esté "encima" en el árbol — no tapa nada. Una
+          vez termina, la tarjeta se hace visible y, al venir después en el
+          orden natural, queda sobre la planta persistida en vez de taparla
+          — el vidrio esmerilado de la tarjeta hasta la difumina donde se
+          cruzan, en vez de que la planta se vea "flotando" encima del login. */}
+      <SeedGrowthIntro onDone={() => setIntroDone(true)} persistPlant />
+
       <KeyboardAvoidingView
         style={{ flex: 1, opacity: introDone ? 1 : 0 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -231,8 +239,6 @@ export function AuthScreen() {
       </KeyboardAvoidingView>
 
       <TermsModal visible={termsModalOpen} onClose={() => setTermsModalOpen(false)} />
-
-      {!introDone && <SeedGrowthIntro onDone={() => setIntroDone(true)} />}
     </View>
   );
 }

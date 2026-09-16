@@ -5,6 +5,7 @@
 // según cuál esté montada — mobile/app/_layout.tsx decide cuál usar según
 // si hay un proyecto de Supabase configurado.
 import { createContext, useContext } from 'react';
+import type { CategoryOption } from './categories';
 import type { Account, Budget, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
 
 export interface KipoContextValue {
@@ -21,6 +22,7 @@ export interface KipoContextValue {
   confirmSms: (id: string, overrides?: Partial<Transaction>) => void;
   discardSms: (id: string) => void;
   addBudget: (budget: Omit<Budget, 'id'>) => void;
+  updateBudget: (id: string, patch: Partial<Omit<Budget, 'id'>>) => void;
   removeBudget: (id: string) => void;
   addReminder: (reminder: Omit<Reminder, 'id'>) => void;
   removeReminder: (id: string) => void;
@@ -43,6 +45,11 @@ export interface KipoContextValue {
   // Suspende/reactiva a OTRO miembro — solo un admin puede hacerlo. No borra
   // datos, solo revoca/restaura el acceso (ver users.status).
   setMemberStatus: (memberId: string, status: 'active' | 'suspended') => void;
+  // Subcategoría nueva dentro de un grupo macro ya existente (ej. "Parqueo
+  // mensual" en Transporte) — solo un admin la ofrece en la UI (ver
+  // CategoryPickerModal.tsx), aunque a nivel de datos cualquier miembro de
+  // la familia podría (mismo círculo de confianza que el resto).
+  addCustomCategory: (input: { groupSlug: string; label: string }) => void;
   addAccount: (account: Omit<Account, 'id'>) => void;
   removeAccount: (id: string) => void;
   addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'savedAmount'>) => void;
@@ -73,5 +80,6 @@ export function emptyKipoState(): KipoState {
     categorizationRules: [],
     accounts: [],
     savingsGoals: [],
+    customCategories: [],
   };
 }

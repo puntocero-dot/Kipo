@@ -13,8 +13,10 @@
 import * as Crypto from 'expo-crypto';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { categoryIdFor, fetchCategoryMaps, GROUP_TO_KIND, KIND_TO_GROUP, type CategoryMaps } from './categoriesRemote';
+import { GROUP_LABELS, type CategoryOption } from './categories';
 import { KipoContext, emptyKipoState, type KipoContextValue } from './kipoContext';
 import { supabase } from '../lib/supabase';
+import { colors, groupColors } from '../theme';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
 import { shiftByRecurrence } from './selectors';
 import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
@@ -116,7 +118,7 @@ interface Props {
 export function SupabaseKipoProvider({ familyId, membershipId, children }: Props) {
   const [state, setState] = useState<KipoState>(emptyKipoState());
   const [loading, setLoading] = useState(true);
-  const catMapsRef = useRef<CategoryMaps>({ idToSlug: new Map(), slugToId: new Map() });
+  const catMapsRef = useRef<CategoryMaps>({ idToSlug: new Map(), slugToId: new Map(), customOptions: [] });
 
   const loadAll = useCallback(async () => {
     const cats = await fetchCategoryMaps();
@@ -168,6 +170,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       categorizationRules,
       accounts,
       savingsGoals,
+      customCategories: cats.customOptions,
     });
     setLoading(false);
   }, [familyId, membershipId]);
@@ -457,6 +460,18 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     [familyId],
   );
 
+  const updateBudget = useCallback((id: string, patch: Partial<Omit<Budget, 'id'>>) => {
+    setState((prev) => ({ ...prev, budgets: prev.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b)) }));
+    const dbPatch: Record<string, unknown> = {};
+    if (patch.name !== undefined) dbPatch.name = patch.name;
+    if (patch.amountLimit !== undefined) dbPatch.amount_limit = patch.amountLimit;
+    if (patch.alertThresholdPct !== undefined) dbPatch.alert_threshold_pct = patch.alertThresholdPct;
+    if (patch.groupSlug !== undefined) dbPatch.category_kind = patch.groupSlug ? GROUP_TO_KIND[patch.groupSlug] ?? patch.groupSlug : null;
+    if (Object.keys(dbPatch).length > 0) {
+      supabase!.from('budgets').update(dbPatch).eq('id', id).then();
+    }
+  }, []);
+
   const removeBudget = useCallback((id: string) => {
     setState((prev) => ({ ...prev, budgets: prev.budgets.filter((b) => b.id !== id) }));
     supabase!.from('budgets').delete().eq('id', id).then();
@@ -653,6 +668,46 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     })();
   }, []);
 
+  const addCustomCategory = useCallback(
+    ({ groupSlug, label }: { groupSlug: string; label: string }) => {
+      const subSlug = label
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      (async () => {
+        const { data } = await supabase!
+          .from('categories')
+          .insert({
+            family_id: familyId,
+            kind: GROUP_TO_KIND[groupSlug] ?? groupSlug,
+            slug: subSlug,
+            name: label.trim(),
+            is_system: false,
+          })
+          .select()
+          .single();
+        if (data) {
+          catMapsRef.current.idToSlug.set(data.id, { groupSlug, subSlug: data.slug });
+          catMapsRef.current.slugToId.set(`${groupSlug}:${data.slug}`, data.id);
+          const option: CategoryOption = {
+            groupSlug,
+            groupLabel: GROUP_LABELS[groupSlug] ?? groupSlug,
+            subSlug: data.slug,
+            label: data.name,
+            color: groupColors[groupSlug] ?? colors.muted,
+            kind: data.kind === 'ingreso' ? 'ingreso' : 'gasto',
+          };
+          catMapsRef.current.customOptions = [...catMapsRef.current.customOptions, option];
+          setState((prev) => ({ ...prev, customCategories: [...prev.customCategories, option] }));
+        }
+      })();
+    },
+    [familyId],
+  );
+
   const addAccount = useCallback(
     (account: Omit<Account, 'id'>) => {
       (async () => {
@@ -740,6 +795,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       confirmSms,
       discardSms,
       addBudget,
+      updateBudget,
       removeBudget,
       addReminder,
       removeReminder,
@@ -750,6 +806,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       updateFamilyProfile,
       setAccentColor,
       setMemberStatus,
+      addCustomCategory,
       addAccount,
       removeAccount,
       addSavingsGoal,
@@ -771,6 +828,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       confirmSms,
       discardSms,
       addBudget,
+      updateBudget,
       removeBudget,
       addReminder,
       removeReminder,
@@ -781,6 +839,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       updateFamilyProfile,
       setAccentColor,
       setMemberStatus,
+      addCustomCategory,
       addAccount,
       removeAccount,
       addSavingsGoal,

@@ -115,7 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase!.auth.signUp({
       email,
       password,
-      options: { data: { terms_accepted_at: termsAccepted ? new Date().toISOString() : null } },
+      options: {
+        data: { terms_accepted_at: termsAccepted ? new Date().toISOString() : null },
+        // Sin esto, el correo de confirmación redirige al "Site URL" fijo del
+        // dashboard de Supabase (por defecto localhost:3000, que no existe
+        // fuera de este entorno de desarrollo) — con esto, siempre vuelve a
+        // donde sea que la app esté corriendo de verdad. Requiere que esa URL
+        // esté en la lista blanca de Redirect URLs del dashboard.
+        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      },
     });
     return error?.message ?? null;
   }, []);
