@@ -307,6 +307,11 @@ $$;
 grant execute on function my_family_ids() to authenticated;
 grant execute on function my_admin_family_ids() to authenticated;
 grant execute on function my_membership_ids() to authenticated;
+-- Postgres otorga EXECUTE a PUBLIC (incluye `anon`) por defecto al crear
+-- una función — se revoca explícitamente (ver migración 0018_lint_hardening.sql).
+revoke execute on function my_family_ids() from public;
+revoke execute on function my_admin_family_ids() from public;
+revoke execute on function my_membership_ids() from public;
 
 alter table transactions enable row level security;
 alter table budgets enable row level security;
@@ -351,6 +356,7 @@ create policy admins_update_own_family on families
 create or replace function prevent_direct_invite_code_change()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if new.invite_code is distinct from old.invite_code
@@ -382,6 +388,7 @@ create policy users_update_own_row on users
 create or replace function prevent_users_privilege_escalation()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   if new.family_id is distinct from old.family_id then
@@ -507,6 +514,8 @@ $$;
 
 grant execute on function create_family_and_join(text, text) to authenticated;
 grant execute on function join_family_by_invite(text, text) to authenticated;
+revoke execute on function create_family_and_join(text, text) from public;
+revoke execute on function join_family_by_invite(text, text) from public;
 
 -- ---------------------------------------------------------------------------
 -- Regenerar código de invitación (solo un admin de la familia).
@@ -538,6 +547,7 @@ end;
 $$;
 
 grant execute on function regenerate_invite_code(uuid) to authenticated;
+revoke execute on function regenerate_invite_code(uuid) from public;
 
 -- ---------------------------------------------------------------------------
 -- Apariencia del login — solo el dueño de la app (identificado por una fila
@@ -563,6 +573,10 @@ as $$
   select exists (select 1 from app_owners where auth_user_id = auth.uid());
 $$;
 grant execute on function is_app_owner() to authenticated, anon;
+-- La app solo la llama con sesión ya iniciada (ver
+-- mobile/src/domain/ownerStore.ts) — no hace falta exponerla más allá.
+revoke execute on function is_app_owner() from public;
+revoke execute on function is_app_owner() from anon;
 
 create table login_branding (
   id                    boolean primary key default true check (id),
@@ -607,6 +621,7 @@ end;
 $$;
 
 grant execute on function save_login_branding(text, text[], numeric[]) to authenticated;
+revoke execute on function save_login_branding(text, text[], numeric[]) from public;
 
 -- ---------------------------------------------------------------------------
 -- Suspender/reactivar a un miembro (solo un admin de su misma familia).
@@ -645,13 +660,17 @@ end;
 $$;
 
 grant execute on function set_member_status(uuid, text) to authenticated;
+revoke execute on function set_member_status(uuid, text) from public;
 
 -- ---------------------------------------------------------------------------
 -- Storage: fondo del login (`branding`, solo el dueño de la app) y foto de
 -- familia (`family-photos`, solo un admin de esa familia). Ambos buckets son
--- públicos en lectura — `branding` debe verse sin sesión, y `family-photos`
--- se queda dentro del mismo círculo de confianza que el resto de los datos
--- de una familia (ver docs/SECURITY_AUDIT.md hallazgo #6).
+-- públicos (`public: true`) — la lectura por URL conocida (como siempre la
+-- usa esta app, vía getPublicUrl()) no pasa por RLS en absoluto, así que no
+-- llevan policy de SELECT: una policy de SELECT sin restricción solo serviría
+-- para listar todos los archivos del bucket vía la API, no hace falta (ver
+-- Database Linter → public_bucket_allows_listing, migración
+-- 0018_lint_hardening.sql).
 -- ---------------------------------------------------------------------------
 
 insert into storage.buckets (id, name, public)
@@ -662,16 +681,12 @@ insert into storage.buckets (id, name, public)
 values ('family-photos', 'family-photos', true)
 on conflict (id) do nothing;
 
-create policy branding_public_read on storage.objects
-  for select using (bucket_id = 'branding');
 create policy branding_owner_write on storage.objects
   for insert to authenticated with check (bucket_id = 'branding' and is_app_owner());
 create policy branding_owner_update on storage.objects
   for update to authenticated using (bucket_id = 'branding' and is_app_owner());
 
 -- Convención de ruta: family-photos/<family_id>/photo.jpg
-create policy family_photos_public_read on storage.objects
-  for select using (bucket_id = 'family-photos');
 create policy family_photos_admin_write on storage.objects
   for insert to authenticated
   with check (bucket_id = 'family-photos' and (storage.foldername(name))[1]::uuid in (select my_admin_family_ids()));
