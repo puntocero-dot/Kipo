@@ -41,6 +41,25 @@
       #root {
         height: 100dvh;
       }
+      /*
+        Chrome pinta el autocompletado (correo/contraseña recordados) con su
+        propio fondo de altísima especificidad, sin importar el backgroundColor
+        que ya tenga el input — se ve como un recuadro celeste/blanco detrás
+        del texto en cualquier campo autocompletado. El truco estándar: una
+        sombra interior enorme y transparente "empuja" ese fondo forzado, con
+        una transición casi infinita para que Chrome no la vuelva a aplicar de
+        golpe. `currentColor` (no un blanco fijo) para que sirva igual en
+        cualquier input de la app, no solo los del login.
+      */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus,
+      input:-webkit-autofill:active {
+        -webkit-text-fill-color: currentColor;
+        -webkit-box-shadow: 0 0 0 1000px transparent inset;
+        box-shadow: 0 0 0 1000px transparent inset;
+        transition: background-color 9999s ease-in-out 0s;
+      }
     </style>
   </head>
 
