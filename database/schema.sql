@@ -312,6 +312,13 @@ grant execute on function my_membership_ids() to authenticated;
 revoke execute on function my_family_ids() from public;
 revoke execute on function my_admin_family_ids() from public;
 revoke execute on function my_membership_ids() from public;
+-- El setup por defecto de un proyecto Supabase otorga EXECUTE directo a
+-- `anon`/`authenticated` (vía `alter default privileges`), no a través de
+-- `public` — revocar de `public` no basta, hay que revocar de `anon`
+-- también (ver migración 0019_revoke_anon_execute.sql).
+revoke execute on function my_family_ids() from anon;
+revoke execute on function my_admin_family_ids() from anon;
+revoke execute on function my_membership_ids() from anon;
 
 alter table transactions enable row level security;
 alter table budgets enable row level security;
@@ -516,6 +523,8 @@ grant execute on function create_family_and_join(text, text) to authenticated;
 grant execute on function join_family_by_invite(text, text) to authenticated;
 revoke execute on function create_family_and_join(text, text) from public;
 revoke execute on function join_family_by_invite(text, text) from public;
+revoke execute on function create_family_and_join(text, text) from anon;
+revoke execute on function join_family_by_invite(text, text) from anon;
 
 -- ---------------------------------------------------------------------------
 -- Regenerar código de invitación (solo un admin de la familia).
@@ -548,6 +557,7 @@ $$;
 
 grant execute on function regenerate_invite_code(uuid) to authenticated;
 revoke execute on function regenerate_invite_code(uuid) from public;
+revoke execute on function regenerate_invite_code(uuid) from anon;
 
 -- ---------------------------------------------------------------------------
 -- Apariencia del login — solo el dueño de la app (identificado por una fila
@@ -622,6 +632,7 @@ $$;
 
 grant execute on function save_login_branding(text, text[], numeric[]) to authenticated;
 revoke execute on function save_login_branding(text, text[], numeric[]) from public;
+revoke execute on function save_login_branding(text, text[], numeric[]) from anon;
 
 -- ---------------------------------------------------------------------------
 -- Suspender/reactivar a un miembro (solo un admin de su misma familia).
@@ -661,6 +672,7 @@ $$;
 
 grant execute on function set_member_status(uuid, text) to authenticated;
 revoke execute on function set_member_status(uuid, text) from public;
+revoke execute on function set_member_status(uuid, text) from anon;
 
 -- ---------------------------------------------------------------------------
 -- Storage: fondo del login (`branding`, solo el dueño de la app) y foto de
