@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { BankShieldIcon, FamilyTreeIcon, VoiceCaptureIcon } from '../../src/components/icons/FeatureIcons';
 import { useAccentColor } from '../../src/domain/accentStore';
 import { useKipo } from '../../src/domain/store';
 import { colors, fonts } from '../../src/theme';
@@ -39,7 +40,7 @@ export default function TabsLayout() {
         options={{
           title: 'Kipo',
           tabBarLabel: 'Inicio',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} accent={accent} />,
+          tabBarIcon: ({ focused }) => <FamilyTreeIcon size={22} color={focused ? accent : colors.muted} />,
         }}
       />
       <Tabs.Screen
@@ -47,7 +48,7 @@ export default function TabsLayout() {
         options={{
           title: 'Registrar gasto',
           tabBarLabel: 'Registrar',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'create' : 'create-outline'} focused={focused} accent={accent} />,
+          tabBarIcon: ({ focused }) => <VoiceCaptureIcon size={22} color={focused ? accent : colors.muted} />,
         }}
       />
       <Tabs.Screen
@@ -55,7 +56,7 @@ export default function TabsLayout() {
         options={{
           title: 'Bandeja de SMS',
           tabBarLabel: 'SMS',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'card' : 'card-outline'} focused={focused} accent={accent} />,
+          tabBarIcon: ({ focused }) => <BankShieldIcon size={22} color={focused ? accent : colors.muted} />,
           tabBarBadge: pendingSms > 0 ? pendingSms : undefined,
         }}
       />

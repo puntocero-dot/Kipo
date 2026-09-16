@@ -3,15 +3,16 @@ import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet } from 'react-native';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
-// Gradiente original de la pantalla de login — usado como valor por
-// defecto mientras carga login_branding, si la fila no tiene datos aún, o
-// en modo local/demo (sin tabla que consultar). Termina en el verde de
-// marca (no en tonos pálidos) para no verse lavado detrás de la tarjeta de
-// login (que ya tiene su propio blur claro), y para dar continuidad visual
-// con el verde que deja SeedGrowthIntro al terminar su animación.
+// Gradiente por defecto de la pantalla de login — usado mientras carga
+// login_branding, si la fila no tiene datos aún, o en modo local/demo (sin
+// tabla que consultar). Verde bosque oscuro con un toque cálido arriba
+// (identidad fintech profesional, no el atardecer cálido de antes). Termina
+// en colors.primaryDeep — el mismo tono en el que se asienta el "flood" de
+// SeedGrowthIntro al terminar su animación — para que la transición sea
+// continua en vez de dar un salto de color.
 const DEFAULT_GRADIENT = {
-  colors: ['#7a3018', '#c9552b', '#e29255', '#1E6B5C', '#123F37'],
-  locations: [0, 0.28, 0.5, 0.72, 1],
+  colors: ['#3D4A34', '#1A3D33', '#123F37'],
+  locations: [0, 0.55, 1],
 };
 
 interface LoginBranding {

@@ -207,7 +207,11 @@ export function SeedGrowthIntro({ onDone, forcePlay = false, persistPlant = fals
 
 const styles = StyleSheet.create({
   container: { alignItems: 'center', justifyContent: 'center' },
-  flood: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary },
+  // primaryDeep (verde bosque oscuro), no primary (ahora un verde vivo
+  // pensado para acentos interactivos, no para una inundación de pantalla
+  // completa) — así el flood termina en el mismo tono en el que arranca el
+  // degradado de LoginBackdrop, sin salto de color.
+  flood: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primaryDeep },
   plantWrap: { position: 'absolute' },
   // `position:'absolute'` sin top/left explícitos ignora el alignItems/
   // justifyContent del padre — con StyleSheet.absoluteFill (inset 0) sí

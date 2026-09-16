@@ -8,7 +8,10 @@
 import { colors } from '../theme';
 import { useKipo } from './store';
 
-export const ACCENT_SWATCHES = ['#1E6B5C', '#2a78d6', '#B4791E', '#B8452F', '#7a3aa8', '#0f766e'];
+// Re-tonalizadas junto al resto de la paleta (theme.ts) para que sigan
+// contrastando sobre el fondo oscuro nuevo, en vez de los tonos apagados que
+// se usaban sobre papel crema.
+export const ACCENT_SWATCHES = ['#3ECF8E', '#3987E5', '#E3AE55', '#E85D4A', '#9B7FE0', '#2DD4BF'];
 
 export function useAccentColor(): string {
   const { state, currentUserId } = useKipo();

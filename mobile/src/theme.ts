@@ -1,51 +1,56 @@
 // Paleta validada con la skill de dataviz (references/palette.md) — orden fijo,
-// nunca ciclado. 5 slots categóricos, uno por grupo de categoría.
-// node scripts/validate_palette.js "#2a78d6,#eb6834,#1baf7a,#eda100,#e87ba4" --mode light
-// → ALL CHECKS PASS (contraste bajo 3:1 en 3 slots => siempre acompañar con
-// etiqueta visible, nunca color solo — ver relief rule).
+// nunca ciclado. 5 slots categóricos, uno por grupo de categoría. Son los
+// mismos hexes documentados como la variante "Dark" de la paleta de
+// referencia (mismo orden azul/naranja/aqua/amarillo/magenta que ya usaba
+// Kipo en modo claro), re-escalonados para leerse sobre una superficie oscura:
+// node scripts/validate_palette.js "#3987e5,#d95926,#199e70,#c98500,#d55181" --mode dark --surface "#153a30"
+// → ALL CHECKS PASS.
 export const groupColors: Record<string, string> = {
-  fijos: '#2a78d6',
-  necesarios: '#eb6834',
-  transporte: '#1baf7a',
-  alimentacion_fuera: '#eda100',
-  salidas_convivencia: '#e87ba4',
+  fijos: '#3987e5',
+  necesarios: '#d95926',
+  transporte: '#199e70',
+  alimentacion_fuera: '#c98500',
+  salidas_convivencia: '#d55181',
   // No es un 6to slot categórico nuevo (no re-validado con la dataviz skill) —
   // reusa el mismo verde semántico de "ingreso" que ya se ve en el resto de
   // la app (colors.good abajo), así una categoría de ingreso nunca se confunde
   // visualmente con una de gasto.
-  ingresos: '#3C8B4A',
+  ingresos: '#4ADE80',
 };
 
-// Identidad visual: una libreta de cuentas familiar, no un banco frío — papel
-// cálido, tinta carbón, un verde pino como color de marca (dinero que crece,
-// distinto del azul genérico de fintech) y un dorado bruñido como acento de
-// segundo nivel (monedas, aguinaldo, la idea de "ahorro"). Semántica de
+// Identidad visual: fintech familiar profesional sobre fondo oscuro — verde
+// bosque profundo (dinero que crece, un jardín de noche) con dorado bruñido
+// como acento de marca y un verde esmeralda vivo para lo interactivo. Antes
+// el pino oscuro servía a la vez de fondo claro-de-marca y de acento sobre
+// papel crema; con el fondo ahora oscuro, ese mismo tono pasa a `primaryDeep`
+// (fondos, degradados, el "flood" de SeedGrowthIntro) y `primary` se vuelve
+// un verde vivo que sí contrasta sobre superficies oscuras. Semántica de
 // ingreso/alerta usa tonos separados de la marca para que nunca se confundan.
 export const colors = {
   // Superficies
-  page: '#F3F0E9',
-  surfaceRaised: '#FBF9F4',
-  card: '#FFFFFF',
+  page: '#0D2620',
+  surfaceRaised: '#123830',
+  card: '#153A30',
   // Tinta
-  textPrimary: '#231F1A',
-  textSecondary: '#6C6255',
-  muted: '#96897A',
+  textPrimary: '#F4EFE4',
+  textSecondary: '#C7D2C3',
+  muted: '#7E9186',
   // Líneas — con presencia real, no el 10% casi invisible de antes.
-  gridline: '#E7E0D2',
-  border: '#DFD6C4',
+  gridline: '#20443A',
+  border: '#2B5445',
   // Marca
-  primary: '#1E6B5C',
+  primary: '#3ECF8E',
   primaryDeep: '#123F37',
-  primarySoft: '#E1EEE9',
-  gold: '#B4791E',
-  goldSoft: '#F5E6CC',
+  primarySoft: '#1C3F34',
+  gold: '#E3AE55',
+  goldSoft: '#3A2F18',
   // Semántica
-  good: '#3C8B4A',
-  goodSoft: '#E3F1E4',
-  warning: '#C97A1F',
-  warningSoft: '#F7E9D6',
-  critical: '#B8452F',
-  criticalSoft: '#F6E1DB',
+  good: '#4ADE80',
+  goodSoft: '#1C3A24',
+  warning: '#E08D3C',
+  warningSoft: '#3D2A16',
+  critical: '#E85D4A',
+  criticalSoft: '#3D1F1A',
 };
 
 // Outfit para números y titulares (confianza, peso) + Plus Jakarta Sans para
