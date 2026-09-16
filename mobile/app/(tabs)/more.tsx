@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FamilyTrackingIcon } from '../../src/components/icons/FeatureIcons';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { Card, Screen, SectionTitle } from '../../src/components/ui';
 import { useAuth } from '../../src/domain/authStore';
@@ -17,7 +18,7 @@ function MenuRow({
   description,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Ionicons.glyphMap | React.ReactElement;
   label: string;
   description: string;
   onPress: () => void;
@@ -25,7 +26,7 @@ function MenuRow({
   return (
     <Pressable style={({ pressed }) => [styles.menuRow, pressed && { opacity: 0.6 }]} onPress={onPress}>
       <View style={styles.menuIconWrap}>
-        <Ionicons name={icon} size={19} color={colors.primary} />
+        {typeof icon === 'string' ? <Ionicons name={icon} size={19} color={colors.primary} /> : icon}
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.menuLabel}>{label}</Text>
@@ -68,7 +69,7 @@ export default function MoreScreen() {
           onPress={() => router.push('/accounts')}
         />
         <MenuRow
-          icon="people-outline"
+          icon={<FamilyTrackingIcon size={19} color={colors.primary} />}
           label="Familia y perfil"
           description="Miembros, moneda, código de invitación"
           onPress={() => router.push('/family')}

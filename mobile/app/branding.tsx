@@ -9,8 +9,10 @@ import { notify } from '../src/lib/confirm';
 import { isSupabaseConfigured, supabase } from '../src/lib/supabase';
 import { colors, fonts, radius, spacing } from '../src/theme';
 
-const DEFAULT_COLORS = ['#7a3018', '#c9552b', '#e29255', '#cfc2a8', '#8fa6ad'];
-const DEFAULT_LOCATIONS = [0, 0.28, 0.5, 0.72, 1];
+// Debe coincidir con el default de LoginBackdrop.tsx — este es el fallback
+// que ve un admin que nunca guardó un degradado propio.
+const DEFAULT_COLORS = ['#3D4A34', '#1A3D33', '#123F37'];
+const DEFAULT_LOCATIONS = [0, 0.55, 1];
 
 export default function BrandingScreen() {
   const [gradientColors, setGradientColors] = useState<string[]>(DEFAULT_COLORS);
