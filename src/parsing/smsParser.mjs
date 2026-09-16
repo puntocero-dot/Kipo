@@ -13,7 +13,7 @@
 // ampliar sin tocar la lógica central, agregando el patrón real que envíe
 // cada banco del usuario.
 
-import { extractAmount } from './expenseTextParser.mjs';
+import { detectIsIncome, extractAmount } from './expenseTextParser.mjs';
 
 const BANK_PATTERNS = [
   {
@@ -78,7 +78,7 @@ export function parseBankSms(rawSms, { now = new Date() } = {}) {
     amount,
     merchant: upperWordsMatch ? normalizeMerchant(upperWordsMatch[1]) : null,
     card_last4: null,
-    transaction_type: /retiro/i.test(rawSms) ? 'retiro' : /abono|dep[oó]sito/i.test(rawSms) ? 'deposito' : 'compra',
+    transaction_type: /retiro/i.test(rawSms) ? 'retiro' : detectIsIncome(rawSms) ? 'deposito' : 'compra',
     occurred_at: now.toISOString(),
     confidence: amount !== null ? 'low' : 'none',
   };

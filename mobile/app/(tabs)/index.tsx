@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BudgetBarRow } from '../../src/components/BudgetBarRow';
 import { DonutChart } from '../../src/components/DonutChart';
@@ -11,12 +11,14 @@ import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen, SectionTitle } from '../../src/components/ui';
 import { useAccentColor } from '../../src/domain/accentStore';
 import {
+  availableMonths,
   computeBudgetUsage,
   computeMacroDistribution,
   computeMonthlyTrend,
   computeMonthSummary,
   computeUpcomingReminders,
   daysUntil,
+  monthKey,
 } from '../../src/domain/selectors';
 import { useKipo } from '../../src/domain/store';
 import { colors, fonts, radius, shadow, spacing } from '../../src/theme';
@@ -33,15 +35,26 @@ export default function DashboardScreen() {
   const accent = useAccentColor();
   const now = new Date();
 
-  const summary = computeMonthSummary(state.transactions, now);
-  const macro = computeMacroDistribution(state.transactions, now);
+  // Qué mes se muestra en el balance/presupuestos/dona/últimos movimientos —
+  // por defecto el actual. "Evolución mensual" y "Próximos pagos" son vistas
+  // de tendencia/futuro y siempre usan `now` real, sin importar este filtro.
+  const [monthKeySel, setMonthKeySel] = useState(() => monthKey(now.toISOString()));
+  const months = useMemo(() => availableMonths(state.transactions), [state.transactions]);
+  const selectedDate = useMemo(() => {
+    const [year, month] = monthKeySel.split('-').map(Number);
+    return new Date(year, month - 1, 1);
+  }, [monthKeySel]);
+
+  const summary = computeMonthSummary(state.transactions, selectedDate);
+  const macro = computeMacroDistribution(state.transactions, selectedDate);
   const trend = computeMonthlyTrend(state.transactions, 6, now);
-  const budgetUsage = computeBudgetUsage(state.budgets, state.transactions, now);
+  const budgetUsage = computeBudgetUsage(state.budgets, state.transactions, selectedDate);
   const topBudgets = [...budgetUsage]
     .sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status] || b.pct - a.pct)
     .slice(0, 4);
   const upcoming = computeUpcomingReminders(state.reminders, 7, now);
   const latest = [...state.transactions]
+    .filter((t) => monthKey(t.occurredAt) === monthKeySel)
     .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
     .slice(0, 6);
 
@@ -53,8 +66,22 @@ export default function DashboardScreen() {
       <Screen>
         <View>
           <Text style={styles.greeting}>{state.familyName}</Text>
-          <Text style={styles.monthLabel}>Balance de {MONTH_NAMES[now.getMonth()]}</Text>
+          <Text style={styles.monthLabel}>Balance de {MONTH_NAMES[selectedDate.getMonth()]}</Text>
         </View>
+
+        {months.length > 1 && (
+          <View style={styles.chipsRow}>
+            {months.map((m) => (
+              <Pressable
+                key={m.key}
+                onPress={() => setMonthKeySel(m.key)}
+                style={[styles.chip, monthKeySel === m.key && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, monthKeySel === m.key && styles.chipTextActive]}>{m.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
 
         <LinearGradient
           colors={[accent, colors.primaryDeep]}
@@ -169,6 +196,11 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   greeting: { fontFamily: fonts.display, fontSize: 24, color: colors.textPrimary },
   monthLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.muted, marginTop: 2, textTransform: 'capitalize' },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: { paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },
+  chipTextActive: { color: '#fff', fontFamily: fonts.bodyBold },
   heroCard: {
     borderRadius: radius.xl,
     padding: spacing.lg,
