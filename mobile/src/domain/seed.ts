@@ -259,5 +259,6 @@ export function buildSeedState(): KipoState {
     categorizationRules: [],
     accounts,
     savingsGoals: buildSeedSavingsGoals(accounts),
+    customCategories: [],
   };
 }

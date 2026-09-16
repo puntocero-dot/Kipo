@@ -15,6 +15,11 @@ interface Props {
   // todas formas (si no, nunca podría verla en un dispositivo con esa
   // preferencia activada).
   forcePlay?: boolean;
+  // La planta es puramente decorativa y no molesta a nada — en el login
+  // (no en la vista previa de /branding, que sí debe cerrarse del todo) se
+  // queda de fondo para siempre en vez de desaparecer junto con la
+  // inundación verde y el logo. Ver AuthScreen.tsx.
+  persistPlant?: boolean;
 }
 
 const STEM_LENGTH = 140;
@@ -31,13 +36,15 @@ const EXIT_DURATION = 400;
 // react-native-reanimated/lottie/skia en el proyecto: se construye con
 // Animated (RN) + react-native-svg, ya instalados, mismo enfoque que el
 // hover-lift que ya existe en AuthScreen.tsx.
-export function SeedGrowthIntro({ onDone, forcePlay = false }: Props) {
+export function SeedGrowthIntro({ onDone, forcePlay = false, persistPlant = false }: Props) {
   const { height: screenH, width: screenW } = Dimensions.get('window');
   const progress = useRef(new Animated.Value(0)).current;
   const exitOpacity = useRef(new Animated.Value(1)).current;
   const [skipped, setSkipped] = useState(false);
+  const [finished, setFinished] = useState(false);
 
   const finish = (instant: boolean) => {
+    setFinished(true);
     if (instant) {
       onDone();
       return;
@@ -107,7 +114,16 @@ export function SeedGrowthIntro({ onDone, forcePlay = false }: Props) {
     outputRange: ['scale(0.4)', 'scale(1)'],
     extrapolate: 'clamp',
   });
-  // 0.5 → 0.62: pausa — la planta ya está completa y se queda quieta un
+  // Segundo par de hojas, más arriba del tallo, un poco más chico — aparece
+  // justo después del primer par para que la planta se vea más llena sin
+  // que todas las hojas salgan de golpe.
+  const upperLeavesOpacity = progress.interpolate({ inputRange: [0, 0.4, 0.56, 1], outputRange: [0, 0, 1, 1], extrapolate: 'clamp' });
+  const upperLeavesTransform = progress.interpolate({
+    inputRange: [0.4, 0.56],
+    outputRange: ['scale(0.4)', 'scale(1)'],
+    extrapolate: 'clamp',
+  });
+  // 0.56 → 0.62: pausa — la planta ya está completa y se queda quieta un
   // momento antes de que arranque la inundación, para que se perciba como
   // una etapa terminada y no un paso más de un mismo movimiento continuo.
 
@@ -128,23 +144,35 @@ export function SeedGrowthIntro({ onDone, forcePlay = false }: Props) {
   // costado queda despejado de verdad, no apretado contra la tarjeta.
   const plantLeft = screenW * 0.16;
 
-  return (
-    <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity: exitOpacity }]}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={skip} accessibilityLabel="Saltar animación">
-        {/* Inundación verde: círculo pequeño anclado a la base de la planta que escala hasta cubrir toda la pantalla. */}
-        <Animated.View
-          style={[
-            styles.flood,
-            {
-              left: plantLeft + 28,
-              bottom: screenH * 0.32 - 12,
-              transform: [{ scale: floodScale }],
-            },
-          ]}
-        />
+  // Si la planta se queda de fondo para siempre, solo la inundación+logo se
+  // desvanecen (este wrapper); si no, la salida es la de siempre — todo
+  // junto, incluida la planta — para no dejarla "pop" de golpe cuando el
+  // padre la desmonta (ver branding.tsx, que cierra la vista previa entera
+  // apenas termina).
+  const transientOpacity = persistPlant ? exitOpacity : 1;
 
-        <Animated.View style={[styles.wordmarkWrap, { opacity: wordmarkOpacity }]}>
-          <Animated.Text style={styles.wordmark}>Kipo</Animated.Text>
+  return (
+    <Animated.View
+      style={[StyleSheet.absoluteFill, styles.container, { opacity: persistPlant ? 1 : exitOpacity }]}
+      pointerEvents={finished ? 'none' : 'auto'}
+    >
+      <Pressable style={StyleSheet.absoluteFill} onPress={skip} accessibilityLabel="Saltar animación">
+        <Animated.View style={{ opacity: transientOpacity }}>
+          {/* Inundación verde: círculo pequeño anclado a la base de la planta que escala hasta cubrir toda la pantalla. */}
+          <Animated.View
+            style={[
+              styles.flood,
+              {
+                left: plantLeft + 28,
+                bottom: screenH * 0.32 - 12,
+                transform: [{ scale: floodScale }],
+              },
+            ]}
+          />
+
+          <Animated.View style={[styles.wordmarkWrap, { opacity: wordmarkOpacity }]}>
+            <Animated.Text style={styles.wordmark}>Kipo</Animated.Text>
+          </Animated.View>
         </Animated.View>
 
         <Svg
@@ -166,6 +194,10 @@ export function SeedGrowthIntro({ onDone, forcePlay = false }: Props) {
             <Path d="M32 55 C 12 45, 2 55, 0 70 C 20 72, 30 65, 32 55 Z" fill={colors.gold} />
             <Path d="M32 65 C 52 55, 62 65, 64 80 C 44 82, 34 75, 32 65 Z" fill={colors.gold} />
           </AnimatedG>
+          <AnimatedG opacity={upperLeavesOpacity} transform={upperLeavesTransform}>
+            <Path d="M32 42 C 16 34, 8 42, 6 54 C 22 56, 30 50, 32 42 Z" fill={colors.gold} />
+            <Path d="M32 48 C 48 40, 56 48, 58 60 C 42 62, 34 56, 32 48 Z" fill={colors.gold} />
+          </AnimatedG>
           <AnimatedCircle cx={32} cy={STEM_LENGTH + 32} r={9} fill={colors.gold} opacity={seedOpacity} />
         </Svg>
       </Pressable>
@@ -174,7 +206,7 @@ export function SeedGrowthIntro({ onDone, forcePlay = false }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  container: { alignItems: 'center', justifyContent: 'center' },
   flood: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.primary },
   plantWrap: { position: 'absolute' },
   // `position:'absolute'` sin top/left explícitos ignora el alignItems/

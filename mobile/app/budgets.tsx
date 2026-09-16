@@ -4,19 +4,37 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BudgetBarRow } from '../src/components/BudgetBarRow';
 import { CategoryPickerModal } from '../src/components/CategoryPickerModal';
 import { Card, EmptyState, PrimaryButton, Screen, SecondaryButton, SectionTitle } from '../src/components/ui';
+import { GROUP_LABELS } from '../src/domain/categories';
 import { computeBudgetUsage } from '../src/domain/selectors';
 import { useKipo } from '../src/domain/store';
 import { notify } from '../src/lib/confirm';
 import { colors, fonts, radius, spacing } from '../src/theme';
 
 export default function BudgetsScreen() {
-  const { state, addBudget, removeBudget } = useKipo();
+  const { state, addBudget, updateBudget, removeBudget } = useKipo();
   const [name, setName] = useState('');
   const [limit, setLimit] = useState('');
   const [groupSlug, setGroupSlug] = useState<string | null | 'general'>('general');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const usage = computeBudgetUsage(state.budgets, state.transactions);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setName('');
+    setLimit('');
+    setGroupSlug('general');
+  };
+
+  const startEdit = (budgetId: string) => {
+    const budget = state.budgets.find((b) => b.id === budgetId);
+    if (!budget) return;
+    setEditingId(budget.id);
+    setName(budget.name);
+    setLimit(String(budget.amountLimit));
+    setGroupSlug(budget.groupSlug ?? 'general');
+  };
 
   const submit = () => {
     const amountLimit = parseFloat(limit.replace(',', '.'));
@@ -25,17 +43,19 @@ export default function BudgetsScreen() {
       return;
     }
     const isGeneral = groupSlug === 'general';
-    if (isGeneral && state.budgets.some((b) => b.groupSlug === null)) {
+    if (isGeneral && state.budgets.some((b) => b.groupSlug === null && b.id !== editingId)) {
       notify(
         'Ya existe un presupuesto general',
         'Solo puede haber un presupuesto general del mes a la vez — elige una categoría específica para este nuevo presupuesto.',
       );
       return;
     }
-    addBudget({ name: name.trim(), groupSlug: isGeneral ? null : groupSlug, amountLimit, alertThresholdPct: 80 });
-    setName('');
-    setLimit('');
-    setGroupSlug('general');
+    if (editingId) {
+      updateBudget(editingId, { name: name.trim(), groupSlug: isGeneral ? null : groupSlug, amountLimit });
+    } else {
+      addBudget({ name: name.trim(), groupSlug: isGeneral ? null : groupSlug, amountLimit, alertThresholdPct: 80 });
+    }
+    resetForm();
   };
 
   return (
@@ -48,16 +68,21 @@ export default function BudgetsScreen() {
           usage.map((b) => (
             <View key={b.id} style={styles.budgetItem}>
               <BudgetBarRow budget={b} />
-              <Pressable onPress={() => removeBudget(b.id)}>
-                <Text style={styles.removeLink}>Eliminar</Text>
-              </Pressable>
+              <View style={styles.actionsRow}>
+                <Pressable onPress={() => startEdit(b.id)}>
+                  <Text style={styles.editLink}>Editar</Text>
+                </Pressable>
+                <Pressable onPress={() => removeBudget(b.id)}>
+                  <Text style={styles.removeLink}>Eliminar</Text>
+                </Pressable>
+              </View>
             </View>
           ))
         )}
       </Card>
 
       <Card>
-        <SectionTitle icon="add-circle-outline">Nuevo presupuesto</SectionTitle>
+        <SectionTitle icon="add-circle-outline">{editingId ? 'Editar presupuesto' : 'Nuevo presupuesto'}</SectionTitle>
         <TextInput style={styles.input} placeholder="Nombre (ej. Salidas y comida fuera)" value={name} onChangeText={setName} />
         <TextInput
           style={styles.input}
@@ -68,12 +93,13 @@ export default function BudgetsScreen() {
         />
         <Pressable onPress={() => setPickerOpen(true)} style={styles.categoryPicker}>
           <Text style={styles.categoryPickerText}>
-            {groupSlug === 'general' ? 'Presupuesto general del mes' : `Categoría: ${groupSlug}`}
+            {groupSlug === 'general' ? 'Presupuesto general del mes' : `Categoría: ${GROUP_LABELS[groupSlug ?? ''] ?? groupSlug}`}
           </Text>
           <Ionicons name="chevron-forward" size={16} color={colors.muted} />
         </Pressable>
         <SecondaryButton label="Usar presupuesto general (no por categoría)" onPress={() => setGroupSlug('general')} />
-        <PrimaryButton label="Crear presupuesto" onPress={submit} />
+        <PrimaryButton label={editingId ? 'Guardar cambios' : 'Crear presupuesto'} onPress={submit} />
+        {editingId && <SecondaryButton label="Cancelar" onPress={resetForm} />}
       </Card>
 
       <CategoryPickerModal
@@ -90,7 +116,9 @@ export default function BudgetsScreen() {
 
 const styles = StyleSheet.create({
   budgetItem: { borderTopWidth: 1, borderColor: colors.gridline, paddingVertical: spacing.sm, gap: 6 },
-  removeLink: { color: colors.critical, fontFamily: fonts.bodyMedium, fontSize: 12, alignSelf: 'flex-end' },
+  actionsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.md },
+  editLink: { color: colors.primary, fontFamily: fonts.bodyMedium, fontSize: 12 },
+  removeLink: { color: colors.critical, fontFamily: fonts.bodyMedium, fontSize: 12 },
   input: {
     backgroundColor: colors.page,
     borderRadius: radius.md,

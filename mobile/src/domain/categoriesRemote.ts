@@ -3,6 +3,8 @@
 // — ver database/generate-category-seed.mjs, que siembra `categories` con
 // estos mismos `kind` a partir del diccionario compartido.
 import { supabase } from '../lib/supabase';
+import { GROUP_LABELS, type CategoryOption } from './categories';
+import { colors, groupColors } from '../theme';
 
 export const KIND_TO_GROUP: Record<string, string> = {
   fijo: 'fijos',
@@ -20,22 +22,36 @@ export const GROUP_TO_KIND: Record<string, string> = Object.fromEntries(
 export interface CategoryMaps {
   idToSlug: Map<string, { groupSlug: string; subSlug: string }>;
   slugToId: Map<string, string>; // clave `${groupSlug}:${subSlug}`
+  // Subcategorías agregadas por alguna familia (family_id no nulo) — las del
+  // catálogo del sistema ya vienen de CATEGORY_OPTIONS, no se duplican aquí.
+  customOptions: CategoryOption[];
 }
 
 export async function fetchCategoryMaps(): Promise<CategoryMaps> {
   const idToSlug = new Map<string, { groupSlug: string; subSlug: string }>();
   const slugToId = new Map<string, string>();
+  const customOptions: CategoryOption[] = [];
 
-  const { data, error } = await supabase!.from('categories').select('id, slug, kind');
+  const { data, error } = await supabase!.from('categories').select('id, slug, kind, name, family_id');
   if (error) throw error;
 
   for (const row of data ?? []) {
     const groupSlug = KIND_TO_GROUP[row.kind] ?? row.kind;
     idToSlug.set(row.id, { groupSlug, subSlug: row.slug });
     slugToId.set(`${groupSlug}:${row.slug}`, row.id);
+    if (row.family_id) {
+      customOptions.push({
+        groupSlug,
+        groupLabel: GROUP_LABELS[groupSlug] ?? groupSlug,
+        subSlug: row.slug,
+        label: row.name,
+        color: groupColors[groupSlug] ?? colors.muted,
+        kind: row.kind === 'ingreso' ? 'ingreso' : 'gasto',
+      });
+    }
   }
 
-  return { idToSlug, slugToId };
+  return { idToSlug, slugToId, customOptions };
 }
 
 export function categoryIdFor(maps: CategoryMaps, groupSlug: string | null, subSlug: string | null): string | null {

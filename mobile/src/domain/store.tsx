@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { findCategory } from './categories';
+import { GROUP_LABELS, findCategory, type CategoryOption } from './categories';
+import { colors, groupColors } from '../theme';
 import { makeId } from './id';
 import { KipoContext, type KipoContextValue } from './kipoContext';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
@@ -184,8 +185,31 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, budgets: [...prev.budgets, { ...budget, id: makeId('bud') }] }));
   }, []);
 
+  const updateBudget = useCallback((id: string, patch: Partial<Omit<Budget, 'id'>>) => {
+    setState((prev) => ({ ...prev, budgets: prev.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b)) }));
+  }, []);
+
   const removeBudget = useCallback((id: string) => {
     setState((prev) => ({ ...prev, budgets: prev.budgets.filter((b) => b.id !== id) }));
+  }, []);
+
+  const addCustomCategory = useCallback(({ groupSlug, label }: { groupSlug: string; label: string }) => {
+    const subSlug = label
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    const option: CategoryOption = {
+      groupSlug,
+      groupLabel: GROUP_LABELS[groupSlug] ?? groupSlug,
+      subSlug,
+      label: label.trim(),
+      color: groupColors[groupSlug] ?? colors.muted,
+      kind: 'gasto',
+    };
+    setState((prev) => ({ ...prev, customCategories: [...prev.customCategories, option] }));
   }, []);
 
   const addReminder = useCallback((reminder: Omit<Reminder, 'id'>) => {
@@ -340,6 +364,7 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       confirmSms,
       discardSms,
       addBudget,
+      updateBudget,
       removeBudget,
       addReminder,
       removeReminder,
@@ -350,6 +375,7 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       updateFamilyProfile,
       setAccentColor,
       setMemberStatus,
+      addCustomCategory,
       addAccount,
       removeAccount,
       addSavingsGoal,
@@ -370,6 +396,7 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       confirmSms,
       discardSms,
       addBudget,
+      updateBudget,
       removeBudget,
       addReminder,
       removeReminder,
@@ -380,6 +407,7 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       updateFamilyProfile,
       setAccentColor,
       setMemberStatus,
+      addCustomCategory,
       addAccount,
       removeAccount,
       addSavingsGoal,
