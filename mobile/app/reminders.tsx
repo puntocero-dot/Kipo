@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryPickerModal } from '../src/components/CategoryPickerModal';
 import { Card, EmptyState, PrimaryButton, Screen, SectionTitle } from '../src/components/ui';
@@ -32,7 +32,12 @@ export default function RemindersScreen() {
   const [payAmount, setPayAmount] = useState('');
   const [payAccountId, setPayAccountId] = useState<string | null>(null);
 
-  const sorted = [...state.reminders].sort((a, b) => new Date(a.nextDueDate).getTime() - new Date(b.nextDueDate).getTime());
+  // Antes se reordenaba (con parseo de fecha por comparación) en cada
+  // render, incluida cada tecla escrita en los formularios de esta pantalla.
+  const sorted = useMemo(
+    () => [...state.reminders].sort((a, b) => new Date(a.nextDueDate).getTime() - new Date(b.nextDueDate).getTime()),
+    [state.reminders],
+  );
   const accountName = (id: string | null) => state.accounts.find((a) => a.id === id)?.name;
 
   const submit = () => {

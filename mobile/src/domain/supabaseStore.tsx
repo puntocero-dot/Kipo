@@ -16,6 +16,7 @@ import { categoryIdFor, fetchCategoryMaps, GROUP_TO_KIND, KIND_TO_GROUP, type Ca
 import { GROUP_LABELS, type CategoryOption } from './categories';
 import { KipoContext, emptyKipoState, type KipoContextValue } from './kipoContext';
 import { supabase } from '../lib/supabase';
+import { notify } from '../lib/confirm';
 import { colors, groupColors } from '../theme';
 import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
 import { shiftByRecurrence } from './selectors';
@@ -121,7 +122,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
   const catMapsRef = useRef<CategoryMaps>({ idToSlug: new Map(), slugToId: new Map(), customOptions: [] });
 
   const loadAll = useCallback(async () => {
-    const cats = await fetchCategoryMaps();
+    const cats = await fetchCategoryMaps(familyId);
     catMapsRef.current = cats;
 
     const [familyRes, membersRes, txRes, budgetsRes, remindersRes, smsRes, rulesRes, accountsRes, goalsRes] = await Promise.all([
@@ -185,21 +186,40 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
   // completa, no merge fino) — suficiente para el tamaño de datos de una
   // familia; ver docs/TESTING_ENVIRONMENT.md § Nivel 3 para una cola
   // optimista más fina.
+  //
+  // Con debounce: sin esto, cada evento de cada una de las 6 tablas dispara
+  // su propio loadAll() (10 consultas) sin agrupar — un miembro guardando
+  // varios cambios seguidos (o un cambio que toca dos tablas, ej. marcar un
+  // recordatorio como pagado) multiplicaba las recargas innecesariamente en
+  // TODOS los dispositivos conectados de la familia, incluido el que hizo el
+  // cambio. Agrupar eventos cercanos en una sola recarga no cambia el
+  // comportamiento (sigue siendo "recarga completa"), solo evita repetirla
+  // varias veces por ráfaga.
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleReload = useCallback(() => {
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = setTimeout(() => {
+      reloadTimerRef.current = null;
+      loadAll();
+    }, 400);
+  }, [loadAll]);
+
   useEffect(() => {
     const channel = supabase!
       .channel(`kipo-family-${familyId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `family_id=eq.${familyId}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'budgets', filter: `family_id=eq.${familyId}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders', filter: `family_id=eq.${familyId}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `family_id=eq.${familyId}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts', filter: `family_id=eq.${familyId}` }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `family_id=eq.${familyId}` }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `family_id=eq.${familyId}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'budgets', filter: `family_id=eq.${familyId}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders', filter: `family_id=eq.${familyId}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `family_id=eq.${familyId}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts', filter: `family_id=eq.${familyId}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `family_id=eq.${familyId}` }, scheduleReload)
       .subscribe();
 
     return () => {
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       supabase!.removeChannel(channel);
     };
-  }, [familyId, loadAll]);
+  }, [familyId, scheduleReload]);
 
   const addTransactionFromText = useCallback(
     (text: string, userId: string = membershipId): Transaction => {
@@ -253,6 +273,9 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
         if (!error && data) {
           const saved = dbTransactionToApp(data, catMapsRef.current);
           setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === optimisticId ? saved : t)) }));
+        } else if (error) {
+          setState((prev) => ({ ...prev, transactions: prev.transactions.filter((t) => t.id !== optimisticId) }));
+          notify('No se pudo guardar el gasto', error.message);
         }
       })();
 
@@ -263,6 +286,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
 
   const updateTransaction = useCallback(
     (id: string, patch: Partial<Transaction>) => {
+      const previous = state.transactions.find((t) => t.id === id);
       setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
       const dbPatch: Record<string, unknown> = {};
       if (patch.amount !== undefined) dbPatch.amount = patch.amount;
@@ -280,7 +304,16 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
         );
       }
       if (Object.keys(dbPatch).length > 0) {
-        supabase!.from('transactions').update(dbPatch).eq('id', id).then();
+        supabase!
+          .from('transactions')
+          .update(dbPatch)
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) {
+              if (previous) setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === id ? previous : t)) }));
+              notify('No se pudo guardar el cambio', error.message);
+            }
+          });
       }
     },
     [state.transactions],
@@ -288,27 +321,64 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
 
   const confirmTransaction = useCallback(
     (id: string, patch: Partial<Transaction> = {}) => {
+      const previousStatus = state.transactions.find((t) => t.id === id)?.status;
       updateTransaction(id, patch);
       setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === id ? { ...t, status: 'confirmado' } : t)) }));
-      supabase!.from('transactions').update({ status: 'confirmado' }).eq('id', id).then();
+      supabase!
+        .from('transactions')
+        .update({ status: 'confirmado' })
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            if (previousStatus) setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === id ? { ...t, status: previousStatus } : t)) }));
+            notify('No se pudo confirmar el movimiento', error.message);
+          }
+        });
     },
-    [updateTransaction],
+    [updateTransaction, state.transactions],
   );
 
-  const deleteTransaction = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, transactions: prev.transactions.filter((t) => t.id !== id) }));
-    supabase!.from('transactions').delete().eq('id', id).then();
-  }, []);
+  const deleteTransaction = useCallback(
+    (id: string) => {
+      const previous = state.transactions.find((t) => t.id === id);
+      setState((prev) => ({ ...prev, transactions: prev.transactions.filter((t) => t.id !== id) }));
+      supabase!
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            if (previous) setState((prev) => ({ ...prev, transactions: [previous, ...prev.transactions] }));
+            notify('No se pudo eliminar el movimiento', error.message);
+          }
+        });
+    },
+    [state.transactions],
+  );
 
   const correctCategory = useCallback(
     (id: string, groupSlug: string, subSlug: string) => {
       const tx = state.transactions.find((t) => t.id === id);
+      const previous = tx ? { groupSlug: tx.groupSlug, subSlug: tx.subSlug, status: tx.status } : null;
       setState((prev) => ({
         ...prev,
         transactions: prev.transactions.map((t) => (t.id === id ? { ...t, groupSlug, subSlug, status: 'confirmado' } : t)),
       }));
+      // categoryId sale de catMapsRef, que trae TODAS las categorías de la
+      // familia (sistema + personalizadas) — sirve como el mismo chequeo de
+      // "existe de verdad" que findCategory() hace en el store local, solo
+      // que este reconoce también las categorías personalizadas.
       const categoryId = categoryIdFor(catMapsRef.current, groupSlug, subSlug);
-      supabase!.from('transactions').update({ category_id: categoryId, status: 'confirmado' }).eq('id', id).then();
+      supabase!
+        .from('transactions')
+        .update({ category_id: categoryId, status: 'confirmado' })
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            if (previous) setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === id ? { ...t, ...previous } : t)) }));
+            notify('No se pudo guardar la categoría', error.message);
+          }
+        });
 
       // Las reglas de categorización aprendidas solo aplican a gasto (ver
       // parsing.ts) — guardar una para un ingreso nunca se volvería a usar.
@@ -319,9 +389,31 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           .filter((w) => w.length > 3)
           .pop();
         if (distinctiveWord) {
-          const rule: CategorizationRule = { id: `local_${Date.now()}`, keyword: distinctiveWord, groupSlug, subSlug };
+          const optimisticRuleId = `local_${Date.now()}`;
+          const rule: CategorizationRule = { id: optimisticRuleId, keyword: distinctiveWord, groupSlug, subSlug };
           setState((prev) => ({ ...prev, categorizationRules: [rule, ...prev.categorizationRules] }));
-          supabase!.from('categorization_rules').insert({ family_id: familyId, keyword: distinctiveWord, category_id: categoryId }).then();
+          (async () => {
+            const { data, error } = await supabase!
+              .from('categorization_rules')
+              .insert({ family_id: familyId, keyword: distinctiveWord, category_id: categoryId })
+              .select()
+              .single();
+            if (data) {
+              // Reconciliar el id local temporal con el real — sin esto, la
+              // regla se queda con un id que nunca existió en la DB y
+              // desaparece sin aviso la próxima vez que se recarga el estado.
+              setState((prev) => ({
+                ...prev,
+                categorizationRules: prev.categorizationRules.map((r) => (r.id === optimisticRuleId ? { ...r, id: data.id } : r)),
+              }));
+            } else if (error) {
+              // Silencioso a propósito: es un aprendizaje automático de
+              // conveniencia (no una acción que el usuario pidió
+              // explícitamente) — perder la regla no le impide seguir usando
+              // la app, pero si falla no debe quedar "fantasma" en el estado.
+              setState((prev) => ({ ...prev, categorizationRules: prev.categorizationRules.filter((r) => r.id !== optimisticRuleId) }));
+            }
+          })();
         }
       }
     },
@@ -362,6 +454,9 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           .single();
         if (!error && data) {
           setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.map((s) => (s.id === optimisticId ? dbSmsToApp(data) : s)) }));
+        } else if (error) {
+          setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.filter((s) => s.id !== optimisticId) }));
+          notify('No se pudo guardar el SMS', error.message);
         }
       })();
 
@@ -400,7 +495,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       }));
 
       (async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('transactions')
           .insert({
             id: transaction.id,
@@ -425,6 +520,13 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
         if (data) {
           setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === transaction.id ? dbTransactionToApp(data, catMapsRef.current) : t)) }));
           await supabase!.from('sms_inbox').update({ status: 'confirmado', matched_transaction_id: data.id }).eq('id', id);
+        } else if (error) {
+          setState((prev) => ({
+            ...prev,
+            transactions: prev.transactions.filter((t) => t.id !== transaction.id),
+            smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'pendiente' } : s)),
+          }));
+          notify('No se pudo confirmar el SMS', error.message);
         }
       })();
     },
@@ -433,13 +535,22 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
 
   const discardSms = useCallback((id: string) => {
     setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'descartado' } : s)) }));
-    supabase!.from('sms_inbox').update({ status: 'descartado' }).eq('id', id).then();
+    supabase!
+      .from('sms_inbox')
+      .update({ status: 'descartado' })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'pendiente' } : s)) }));
+          notify('No se pudo descartar el SMS', error.message);
+        }
+      });
   }, []);
 
   const addBudget = useCallback(
     (budget: Omit<Budget, 'id'>) => {
       (async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('budgets')
           .insert({
             family_id: familyId,
@@ -455,32 +566,59 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           .select()
           .single();
         if (data) setState((prev) => ({ ...prev, budgets: [...prev.budgets, dbBudgetToApp(data)] }));
+        else if (error) notify('No se pudo crear el presupuesto', error.message);
       })();
     },
     [familyId],
   );
 
-  const updateBudget = useCallback((id: string, patch: Partial<Omit<Budget, 'id'>>) => {
-    setState((prev) => ({ ...prev, budgets: prev.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b)) }));
-    const dbPatch: Record<string, unknown> = {};
-    if (patch.name !== undefined) dbPatch.name = patch.name;
-    if (patch.amountLimit !== undefined) dbPatch.amount_limit = patch.amountLimit;
-    if (patch.alertThresholdPct !== undefined) dbPatch.alert_threshold_pct = patch.alertThresholdPct;
-    if (patch.groupSlug !== undefined) dbPatch.category_kind = patch.groupSlug ? GROUP_TO_KIND[patch.groupSlug] ?? patch.groupSlug : null;
-    if (Object.keys(dbPatch).length > 0) {
-      supabase!.from('budgets').update(dbPatch).eq('id', id).then();
-    }
-  }, []);
+  const updateBudget = useCallback(
+    (id: string, patch: Partial<Omit<Budget, 'id'>>) => {
+      const previous = state.budgets.find((b) => b.id === id);
+      setState((prev) => ({ ...prev, budgets: prev.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b)) }));
+      const dbPatch: Record<string, unknown> = {};
+      if (patch.name !== undefined) dbPatch.name = patch.name;
+      if (patch.amountLimit !== undefined) dbPatch.amount_limit = patch.amountLimit;
+      if (patch.alertThresholdPct !== undefined) dbPatch.alert_threshold_pct = patch.alertThresholdPct;
+      if (patch.groupSlug !== undefined) dbPatch.category_kind = patch.groupSlug ? GROUP_TO_KIND[patch.groupSlug] ?? patch.groupSlug : null;
+      if (Object.keys(dbPatch).length > 0) {
+        supabase!
+          .from('budgets')
+          .update(dbPatch)
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) {
+              if (previous) setState((prev) => ({ ...prev, budgets: prev.budgets.map((b) => (b.id === id ? previous : b)) }));
+              notify('No se pudo guardar el presupuesto', error.message);
+            }
+          });
+      }
+    },
+    [state.budgets],
+  );
 
-  const removeBudget = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, budgets: prev.budgets.filter((b) => b.id !== id) }));
-    supabase!.from('budgets').delete().eq('id', id).then();
-  }, []);
+  const removeBudget = useCallback(
+    (id: string) => {
+      const previous = state.budgets.find((b) => b.id === id);
+      setState((prev) => ({ ...prev, budgets: prev.budgets.filter((b) => b.id !== id) }));
+      supabase!
+        .from('budgets')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            if (previous) setState((prev) => ({ ...prev, budgets: [...prev.budgets, previous] }));
+            notify('No se pudo eliminar el presupuesto', error.message);
+          }
+        });
+    },
+    [state.budgets],
+  );
 
   const addReminder = useCallback(
     (reminder: Omit<Reminder, 'id'>) => {
       (async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('reminders')
           .insert({
             family_id: familyId,
@@ -496,15 +634,29 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           .select()
           .single();
         if (data) setState((prev) => ({ ...prev, reminders: [...prev.reminders, dbReminderToApp(data, catMapsRef.current)] }));
+        else if (error) notify('No se pudo crear el recordatorio', error.message);
       })();
     },
     [familyId],
   );
 
-  const removeReminder = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, reminders: prev.reminders.filter((r) => r.id !== id) }));
-    supabase!.from('reminders').delete().eq('id', id).then();
-  }, []);
+  const removeReminder = useCallback(
+    (id: string) => {
+      const previous = state.reminders.find((r) => r.id === id);
+      setState((prev) => ({ ...prev, reminders: prev.reminders.filter((r) => r.id !== id) }));
+      supabase!
+        .from('reminders')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            if (previous) setState((prev) => ({ ...prev, reminders: [...prev.reminders, previous] }));
+            notify('No se pudo eliminar el recordatorio', error.message);
+          }
+        });
+    },
+    [state.reminders],
+  );
 
   // Marca el ciclo actual de un recordatorio recurrente como pagado: crea el
   // gasto en `transactions` y avanza `next_due_date` al siguiente ciclo, así
@@ -546,33 +698,44 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       }));
 
       (async () => {
-        await supabase!.from('transactions').insert({
-          id: txId,
-          family_id: familyId,
-          user_id: membershipId,
-          type: 'gasto',
-          amount,
-          currency: state.baseCurrency,
-          category_id: categoryIdFor(catMapsRef.current, reminder.groupSlug ?? 'fijos', reminder.subSlug),
-          account_id: resolvedAccountId,
-          description: reminder.name,
-          source: 'recurrente',
-          status: 'confirmado',
-          occurred_at: now,
-        });
-        await supabase!
-          .from('reminders')
-          .update({
-            next_due_date: nextDueDate,
-            is_active: isActive,
-            last_paid_amount: amount,
-            last_paid_at: now,
-            last_paid_transaction_id: txId,
-          })
-          .eq('id', id);
+        const [txRes, reminderRes] = await Promise.all([
+          supabase!.from('transactions').insert({
+            id: txId,
+            family_id: familyId,
+            user_id: membershipId,
+            type: 'gasto',
+            amount,
+            currency: state.baseCurrency,
+            category_id: categoryIdFor(catMapsRef.current, reminder.groupSlug ?? 'fijos', reminder.subSlug),
+            account_id: resolvedAccountId,
+            description: reminder.name,
+            source: 'recurrente',
+            status: 'confirmado',
+            occurred_at: now,
+          }),
+          supabase!
+            .from('reminders')
+            .update({
+              next_due_date: nextDueDate,
+              is_active: isActive,
+              last_paid_amount: amount,
+              last_paid_at: now,
+              last_paid_transaction_id: txId,
+            })
+            .eq('id', id),
+        ]);
+        // Dos escrituras independientes — si una falla, el estado optimista
+        // (que ya asumió ambas) puede haber quedado a medias. En vez de
+        // revertir cada campo a mano, se resincroniza con loadAll() para
+        // garantizar que lo que se ve coincide con lo que de verdad se
+        // guardó, y se avisa.
+        if (txRes.error || reminderRes.error) {
+          notify('No se pudo marcar como pagado', (txRes.error ?? reminderRes.error)!.message);
+          loadAll();
+        }
       })();
     },
-    [state.reminders, state.baseCurrency, membershipId, familyId],
+    [state.reminders, state.baseCurrency, membershipId, familyId, loadAll],
   );
 
   const undoReminderPayment = useCallback(
@@ -593,14 +756,20 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       }));
 
       (async () => {
-        await supabase!.from('transactions').delete().eq('id', txId);
-        await supabase!
-          .from('reminders')
-          .update({ next_due_date: previousDueDate, is_active: true, last_paid_amount: null, last_paid_at: null, last_paid_transaction_id: null })
-          .eq('id', id);
+        const [delRes, reminderRes] = await Promise.all([
+          supabase!.from('transactions').delete().eq('id', txId),
+          supabase!
+            .from('reminders')
+            .update({ next_due_date: previousDueDate, is_active: true, last_paid_amount: null, last_paid_at: null, last_paid_transaction_id: null })
+            .eq('id', id),
+        ]);
+        if (delRes.error || reminderRes.error) {
+          notify('No se pudo deshacer el pago', (delRes.error ?? reminderRes.error)!.message);
+          loadAll();
+        }
       })();
     },
-    [state.reminders],
+    [state.reminders, loadAll],
   );
 
   // En modo remoto un "miembro" nuevo se agrega compartiendo el código de
@@ -618,12 +787,15 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       const { data, error } = await supabase!.rpc('regenerate_invite_code', { target_family_id: familyId });
       if (!error && data) {
         setState((prev) => ({ ...prev, inviteCode: data as string }));
+      } else if (error) {
+        notify('No se pudo regenerar el código', error.message);
       }
     })();
   }, [familyId]);
 
   const updateFamilyProfile = useCallback(
     (patch: { name?: string; photoUrl?: string | null }) => {
+      const previous = { name: state.familyName, photoUrl: state.familyPhotoUrl };
       setState((prev) => ({
         ...prev,
         familyName: patch.name ?? prev.familyName,
@@ -633,21 +805,43 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       if (patch.name !== undefined) dbPatch.name = patch.name;
       if (patch.photoUrl !== undefined) dbPatch.photo_url = patch.photoUrl;
       if (Object.keys(dbPatch).length > 0) {
-        supabase!.from('families').update(dbPatch).eq('id', familyId).then();
+        supabase!
+          .from('families')
+          .update(dbPatch)
+          .eq('id', familyId)
+          .then(({ error }) => {
+            if (error) {
+              setState((prev) => ({ ...prev, familyName: previous.name, familyPhotoUrl: previous.photoUrl }));
+              notify('No se pudo guardar el perfil de familia', error.message);
+            }
+          });
       }
     },
-    [familyId],
+    [familyId, state.familyName, state.familyPhotoUrl],
   );
 
   const setAccentColor = useCallback(
     (color: string | null) => {
+      const previous = state.members.find((m) => m.id === membershipId)?.accentColor ?? null;
       setState((prev) => ({
         ...prev,
         members: prev.members.map((m) => (m.id === membershipId ? { ...m, accentColor: color } : m)),
       }));
-      supabase!.from('users').update({ accent_color: color }).eq('id', membershipId).then();
+      supabase!
+        .from('users')
+        .update({ accent_color: color })
+        .eq('id', membershipId)
+        .then(({ error }) => {
+          if (error) {
+            setState((prev) => ({
+              ...prev,
+              members: prev.members.map((m) => (m.id === membershipId ? { ...m, accentColor: previous } : m)),
+            }));
+            notify('No se pudo guardar el color', error.message);
+          }
+        });
     },
-    [membershipId],
+    [membershipId, state.members],
   );
 
   const setMemberStatus = useCallback((memberId: string, status: 'active' | 'suspended') => {
@@ -664,6 +858,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           ...prev,
           members: prev.members.map((m) => (m.id === memberId ? { ...m, status: status === 'active' ? 'suspended' : 'active' } : m)),
         }));
+        notify('No se pudo cambiar el estado del miembro', error.message);
       }
     })();
   }, []);
@@ -678,7 +873,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
         .replace(/[^a-z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '');
       (async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('categories')
           .insert({
             family_id: familyId,
@@ -702,6 +897,8 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           };
           catMapsRef.current.customOptions = [...catMapsRef.current.customOptions, option];
           setState((prev) => ({ ...prev, customCategories: [...prev.customCategories, option] }));
+        } else if (error) {
+          notify('No se pudo agregar la categoría', error.message);
         }
       })();
     },
@@ -711,7 +908,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
   const addAccount = useCallback(
     (account: Omit<Account, 'id'>) => {
       (async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('accounts')
           .insert({
             family_id: familyId,
@@ -724,20 +921,34 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           .select()
           .single();
         if (data) setState((prev) => ({ ...prev, accounts: [...prev.accounts, dbAccountToApp(data)] }));
+        else if (error) notify('No se pudo agregar la cuenta', error.message);
       })();
     },
     [familyId],
   );
 
-  const removeAccount = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, accounts: prev.accounts.filter((a) => a.id !== id) }));
-    supabase!.from('accounts').delete().eq('id', id).then();
-  }, []);
+  const removeAccount = useCallback(
+    (id: string) => {
+      const previous = state.accounts.find((a) => a.id === id);
+      setState((prev) => ({ ...prev, accounts: prev.accounts.filter((a) => a.id !== id) }));
+      supabase!
+        .from('accounts')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            if (previous) setState((prev) => ({ ...prev, accounts: [...prev.accounts, previous] }));
+            notify('No se pudo eliminar la cuenta', error.message);
+          }
+        });
+    },
+    [state.accounts],
+  );
 
   const addSavingsGoal = useCallback(
     (goal: Omit<SavingsGoal, 'id' | 'savedAmount'>) => {
       (async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('savings_goals')
           .insert({
             family_id: familyId,
@@ -750,6 +961,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
           .select()
           .single();
         if (data) setState((prev) => ({ ...prev, savingsGoals: [...prev.savingsGoals, dbSavingsGoalToApp(data)] }));
+        else if (error) notify('No se pudo crear la meta de ahorro', error.message);
       })();
     },
     [familyId],
@@ -761,15 +973,37 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       if (!goal) return;
       const savedAmount = goal.savedAmount + amount;
       setState((prev) => ({ ...prev, savingsGoals: prev.savingsGoals.map((g) => (g.id === id ? { ...g, savedAmount } : g)) }));
-      supabase!.from('savings_goals').update({ saved_amount: savedAmount }).eq('id', id).then();
+      supabase!
+        .from('savings_goals')
+        .update({ saved_amount: savedAmount })
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            setState((prev) => ({ ...prev, savingsGoals: prev.savingsGoals.map((g) => (g.id === id ? { ...g, savedAmount: goal.savedAmount } : g)) }));
+            notify('No se pudo guardar el aporte', error.message);
+          }
+        });
     },
     [state.savingsGoals],
   );
 
-  const removeSavingsGoal = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, savingsGoals: prev.savingsGoals.filter((g) => g.id !== id) }));
-    supabase!.from('savings_goals').delete().eq('id', id).then();
-  }, []);
+  const removeSavingsGoal = useCallback(
+    (id: string) => {
+      const previous = state.savingsGoals.find((g) => g.id === id);
+      setState((prev) => ({ ...prev, savingsGoals: prev.savingsGoals.filter((g) => g.id !== id) }));
+      supabase!
+        .from('savings_goals')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            if (previous) setState((prev) => ({ ...prev, savingsGoals: [...prev.savingsGoals, previous] }));
+            notify('No se pudo eliminar la meta', error.message);
+          }
+        });
+    },
+    [state.savingsGoals],
+  );
 
   const resetSeedData = useCallback(() => {
     console.warn('resetSeedData no aplica en modo Supabase (son datos reales, no una semilla de prueba).');

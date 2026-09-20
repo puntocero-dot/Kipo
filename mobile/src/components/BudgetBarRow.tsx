@@ -15,7 +15,7 @@ const STATUS_TEXT: Record<BudgetUsage['status'], string> = {
   over: 'Presupuesto superado',
 };
 
-export function BudgetBarRow({ budget }: { budget: BudgetUsage }) {
+export const BudgetBarRow = React.memo(function BudgetBarRow({ budget }: { budget: BudgetUsage }) {
   const color = STATUS_COLOR[budget.status];
   const widthPct = Math.min(budget.pct, 1) * 100;
 
@@ -40,7 +40,7 @@ export function BudgetBarRow({ budget }: { budget: BudgetUsage }) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: { gap: spacing.xs },

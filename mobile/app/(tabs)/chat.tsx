@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryPickerModal } from '../../src/components/CategoryPickerModal';
 import { ConfirmCaptureCard } from '../../src/components/ConfirmCaptureCard';
@@ -22,6 +22,14 @@ export default function ChatScreen() {
   const [messageIds, setMessageIds] = useState<string[]>([]);
   const [correctingId, setCorrectingId] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Antes cada burbuja hacía un .find() lineal sobre TODAS las transacciones
+  // (sin límite, ver historial) en cada render — con un mapa por id, cada
+  // burbuja resuelve su transacción en O(1).
+  const transactionById = useMemo(() => {
+    const map = new Map<string, (typeof state.transactions)[number]>();
+    for (const t of state.transactions) map.set(t.id, t);
+    return map;
+  }, [state.transactions]);
 
   const send = (text: string) => {
     const trimmed = text.trim();
@@ -55,7 +63,7 @@ export default function ChatScreen() {
         )}
 
         {messageIds.map((id) => {
-          const tx = state.transactions.find((t) => t.id === id);
+          const tx = transactionById.get(id);
           if (!tx) return null;
 
           if (tx.status === 'pendiente') {
@@ -96,6 +104,7 @@ export default function ChatScreen() {
           onChangeText={setInput}
           onSubmitEditing={() => send(input)}
           returnKeyType="send"
+          maxLength={500}
         />
         <Pressable style={styles.sendButton} onPress={() => send(input)}>
           <Ionicons name="send" size={17} color="#fff" style={{ marginLeft: -2 }} />
@@ -105,7 +114,7 @@ export default function ChatScreen() {
       <CategoryPickerModal
         visible={!!correctingId}
         onClose={() => setCorrectingId(null)}
-        kind={state.transactions.find((t) => t.id === correctingId)?.type === 'ingreso' ? 'ingreso' : 'gasto'}
+        kind={(correctingId ? transactionById.get(correctingId) : undefined)?.type === 'ingreso' ? 'ingreso' : 'gasto'}
         onSelect={(option) => {
           if (correctingId) {
             correctCategory(correctingId, option.groupSlug, option.subSlug);

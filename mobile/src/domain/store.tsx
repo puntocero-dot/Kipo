@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GROUP_LABELS, findCategory, type CategoryOption } from './categories';
+import { GROUP_TO_KIND } from './categoriesRemote';
 import { colors, groupColors } from '../theme';
 import { makeId } from './id';
 import { KipoContext, type KipoContextValue } from './kipoContext';
@@ -207,7 +208,11 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       subSlug,
       label: label.trim(),
       color: groupColors[groupSlug] ?? colors.muted,
-      kind: 'gasto',
+      // Antes quedaba fijo en 'gasto' sin importar el grupo elegido — una
+      // categoría nueva dentro de "Ingresos" nunca aparecía al categorizar
+      // un ingreso (CategoryPickerModal filtra por kind). Mismo criterio que
+      // ya usa supabaseStore.tsx.
+      kind: GROUP_TO_KIND[groupSlug] === 'ingreso' ? 'ingreso' : 'gasto',
     };
     setState((prev) => ({ ...prev, customCategories: [...prev.customCategories, option] }));
   }, []);

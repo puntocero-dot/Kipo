@@ -33,7 +33,10 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { state } = useKipo();
   const accent = useAccentColor();
-  const now = new Date();
+  // Congelado al montar (no `new Date()` en cada render) — necesario para
+  // que sirva de dependencia estable de los useMemo de abajo; en la práctica
+  // el Dashboard no se queda montado en pantalla cruzando la medianoche.
+  const now = useMemo(() => new Date(), []);
 
   // Qué mes se muestra en el balance/presupuestos/dona/últimos movimientos —
   // por defecto el actual. "Evolución mensual" y "Próximos pagos" son vistas
@@ -45,18 +48,29 @@ export default function DashboardScreen() {
     return new Date(year, month - 1, 1);
   }, [monthKeySel]);
 
-  const summary = computeMonthSummary(state.transactions, selectedDate);
-  const macro = computeMacroDistribution(state.transactions, selectedDate);
-  const trend = computeMonthlyTrend(state.transactions, 6, now);
-  const budgetUsage = computeBudgetUsage(state.budgets, state.transactions, selectedDate);
-  const topBudgets = [...budgetUsage]
-    .sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status] || b.pct - a.pct)
-    .slice(0, 4);
-  const upcoming = computeUpcomingReminders(state.reminders, 7, now);
-  const latest = [...state.transactions]
-    .filter((t) => monthKey(t.occurredAt) === monthKeySel)
-    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
-    .slice(0, 6);
+  // Antes se recalculaban en cada render (incluido cada tecla escrita en
+  // cualquier formulario de esta pantalla) — con useMemo solo se recalculan
+  // cuando de verdad cambian las transacciones/presupuestos/mes elegido.
+  const summary = useMemo(() => computeMonthSummary(state.transactions, selectedDate), [state.transactions, selectedDate]);
+  const macro = useMemo(() => computeMacroDistribution(state.transactions, selectedDate), [state.transactions, selectedDate]);
+  const trend = useMemo(() => computeMonthlyTrend(state.transactions, 6, now), [state.transactions, now]);
+  const budgetUsage = useMemo(
+    () => computeBudgetUsage(state.budgets, state.transactions, selectedDate),
+    [state.budgets, state.transactions, selectedDate],
+  );
+  const topBudgets = useMemo(
+    () => [...budgetUsage].sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status] || b.pct - a.pct).slice(0, 4),
+    [budgetUsage],
+  );
+  const upcoming = useMemo(() => computeUpcomingReminders(state.reminders, 7, now), [state.reminders, now]);
+  const latest = useMemo(
+    () =>
+      [...state.transactions]
+        .filter((t) => monthKey(t.occurredAt) === monthKeySel)
+        .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+        .slice(0, 6),
+    [state.transactions, monthKeySel],
+  );
 
   const memberName = (id: string) => state.members.find((m) => m.id === id)?.name;
   const usedPct = summary.income > 0 ? Math.min(summary.expenses / summary.income, 1) : 0;
