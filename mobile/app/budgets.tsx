@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BudgetBarRow } from '../src/components/BudgetBarRow';
 import { CategoryPickerModal } from '../src/components/CategoryPickerModal';
@@ -18,7 +18,9 @@ export default function BudgetsScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const usage = computeBudgetUsage(state.budgets, state.transactions);
+  // Antes recalculaba en cada render — incluido cada tecla escrita en el
+  // formulario de "Nuevo presupuesto" de la misma pantalla.
+  const usage = useMemo(() => computeBudgetUsage(state.budgets, state.transactions), [state.budgets, state.transactions]);
 
   const resetForm = () => {
     setEditingId(null);

@@ -14,7 +14,14 @@ const SOURCE_ICON: Record<Transaction['source'], keyof typeof Ionicons.glyphMap>
   recurrente: 'repeat-outline',
 };
 
-export function TransactionRow({
+// React.memo: esta fila se renderiza en listas de hasta decenas de
+// movimientos (Historial, Dashboard) — sin memo, cualquier cambio de estado
+// no relacionado en la pantalla (ej. abrir un picker) volvía a montar cada
+// fila. Ayuda de verdad en las pantallas que NO pasan onPress/onDelete como
+// closure nueva en cada render (ej. Dashboard); donde sí se pasa una
+// closure inline (ej. Historial), el memo no hace daño pero tampoco evita
+// el re-render — estabilizar esos callbacks queda para otra pasada.
+export const TransactionRow = React.memo(function TransactionRow({
   transaction,
   memberName,
   showTime,
@@ -76,7 +83,7 @@ export function TransactionRow({
       )}
     </Wrapper>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: {

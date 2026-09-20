@@ -56,6 +56,7 @@ export default function SmsInboxScreen() {
           value={customSms}
           onChangeText={setCustomSms}
           multiline
+          maxLength={4000}
         />
         <PrimaryButton
           label="Procesar SMS"

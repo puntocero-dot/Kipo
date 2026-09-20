@@ -27,12 +27,21 @@ export interface CategoryMaps {
   customOptions: CategoryOption[];
 }
 
-export async function fetchCategoryMaps(): Promise<CategoryMaps> {
+export async function fetchCategoryMaps(familyId: string): Promise<CategoryMaps> {
   const idToSlug = new Map<string, { groupSlug: string; subSlug: string }>();
   const slugToId = new Map<string, string>();
   const customOptions: CategoryOption[] = [];
 
-  const { data, error } = await supabase!.from('categories').select('id, slug, kind, name, family_id');
+  // Antes traía la tabla entera (sistema + TODAS las familias) sin filtrar,
+  // dependiendo 100% de RLS para acotarla — además de más lento (ver
+  // idx_categories_family, migración 0021), un usuario con más de un
+  // espacio de trabajo se traía las categorías personalizadas de CADA
+  // familia a la que pertenece, no solo la activa. Filtrar por family_id
+  // (o null = catálogo del sistema) corrige ambas cosas.
+  const { data, error } = await supabase!
+    .from('categories')
+    .select('id, slug, kind, name, family_id')
+    .or(`family_id.is.null,family_id.eq.${familyId}`);
   if (error) throw error;
 
   for (const row of data ?? []) {

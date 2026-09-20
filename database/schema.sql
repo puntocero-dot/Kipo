@@ -49,6 +49,7 @@ create table users (
 );
 
 create index idx_users_auth_user_id on users (auth_user_id);
+create index idx_users_family on users (family_id);
 
 create table devices (
   id            uuid primary key default gen_random_uuid(),
@@ -79,6 +80,13 @@ create table categories (
   unique (family_id, slug)
 );
 
+-- Sin este índice, select_categories (RLS) evalúa "family_id in (select
+-- my_family_ids())" con un escaneo completo de la tabla en cada consulta —
+-- fetchCategoryMaps() en mobile/src/domain/categoriesRemote.ts trae la tabla
+-- entera sin filtrar del lado del cliente, así que esto es lo único que
+-- acota la búsqueda a nivel de Postgres.
+create index idx_categories_family on categories (family_id);
+
 -- Palabras clave que alimentan el parser de texto/SMS. Las del sistema tienen
 -- family_id null; una familia puede agregar sinónimos propios (p. ej. el
 -- nombre de su restaurante favorito) sin tocar el código.
@@ -90,6 +98,8 @@ create table categorization_rules (
   priority      int not null default 100, -- menor = se evalúa antes
   created_at    timestamptz not null default now()
 );
+
+create index idx_categorization_rules_family on categorization_rules (family_id);
 
 -- ---------------------------------------------------------------------------
 -- Cuentas (opcional, para saber de dónde sale el dinero) y transacciones
@@ -106,6 +116,8 @@ create table accounts (
   currency      text not null default 'USD',
   created_at    timestamptz not null default now()
 );
+
+create index idx_accounts_family on accounts (family_id);
 
 create table transactions (
   id              uuid primary key default gen_random_uuid(),
@@ -179,6 +191,8 @@ create table budgets (
   is_active       boolean not null default true,
   created_at      timestamptz not null default now()
 );
+
+create index idx_budgets_family on budgets (family_id);
 
 -- FK de transactions.budget_id agregada aquí (no inline arriba) porque
 -- `budgets` se define después de `transactions` en este archivo.
@@ -426,14 +440,19 @@ create trigger trg_prevent_users_privilege_escalation
 -- sistema) y escritura (solo tus propias filas, nunca family_id null) —
 -- una sola policy sin `for` dejaba que cualquiera escribiera sobre el
 -- catálogo global compartido (ver migración 0006_security_hardening.sql).
+-- Escritura restringida a admin (my_admin_family_ids(), no my_family_ids())
+-- — la UI ya solo le ofrece "+ Agregar categoría" a un admin
+-- (CategoryPickerModal.tsx); sin este chequeo en la RLS, cualquier miembro
+-- podía saltarse esa restricción llamando el insert directo (ver migración
+-- 0020_categories_admin_only.sql).
 create policy select_categories on categories
   for select using (family_id is null or family_id in (select my_family_ids()));
 create policy insert_own_categories on categories
-  for insert with check (family_id in (select my_family_ids()));
+  for insert with check (family_id in (select my_admin_family_ids()));
 create policy update_own_categories on categories
-  for update using (family_id in (select my_family_ids()));
+  for update using (family_id in (select my_admin_family_ids()));
 create policy delete_own_categories on categories
-  for delete using (family_id in (select my_family_ids()));
+  for delete using (family_id in (select my_admin_family_ids()));
 
 create policy family_isolation_accounts on accounts
   using (family_id in (select my_family_ids()));

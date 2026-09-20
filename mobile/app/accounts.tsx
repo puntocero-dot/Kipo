@@ -39,6 +39,15 @@ function accountTotal(account: Account, transactions: ReturnType<typeof useKipo>
 
 export default function AccountsScreen() {
   const { state, addAccount, removeAccount, addSavingsGoal, contributeSavingsGoal, removeSavingsGoal } = useKipo();
+  // Antes se llamaba accountTotal() (recorre todas las transacciones) una
+  // vez por cuenta EN CADA RENDER, incluida cada tecla escrita en cualquiera
+  // de los formularios de esta misma pantalla. Se precalcula una sola vez
+  // por cuenta y se reusa hasta que cambien cuentas o transacciones.
+  const accountTotals = useMemo(() => {
+    const map = new Map<string, { label: string; amount: number }>();
+    for (const account of state.accounts) map.set(account.id, accountTotal(account, state.transactions));
+    return map;
+  }, [state.accounts, state.transactions]);
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('efectivo');
   const [bankName, setBankName] = useState('');
@@ -103,7 +112,7 @@ export default function AccountsScreen() {
           <EmptyState icon="wallet-outline" message="Aún no has agregado ninguna cuenta." />
         ) : (
           state.accounts.map((account) => {
-            const total = accountTotal(account, state.transactions);
+            const total = accountTotals.get(account.id)!;
             return (
               <View key={account.id} style={styles.accountRow}>
                 <View style={styles.accountIconWrap}>
