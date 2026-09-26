@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | grep -E '/mobile/.*\\.tsx?$' >/dev/null && (cd \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/mobile\" && npx tsc --noEmit)",
+            "timeout": 60,
+            "statusMessage": "Verificando tipos con tsc..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read -r f; case \"$f\" in */database/migrations/*.sql) echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Las migraciones ya numeradas no se editan una vez creadas -- escribe una nueva (siguiente numero) en su lugar, ver database/migrations/.\"}}' ;; esac; }",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
