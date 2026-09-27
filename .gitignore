@@ -1,0 +1,10 @@
+# La app (Expo web export) se copia acá en cada build de Vercel
+# (ver vercel.json buildCommand) — no es código fuente, no se versiona.
+landing/public/app/
+
+# Vercel
+.vercel
+
+# SO / editores
+.DS_Store
+node_modules/
