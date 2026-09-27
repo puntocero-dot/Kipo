@@ -80,7 +80,10 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      {/* "light" = íconos/hora claros — con el tema 100% oscuro de la app,
+          "dark" dejaba la barra de estado del sistema invisible (texto
+          oscuro sobre fondo oscuro) en cualquier pantalla. */}
+      <StatusBar style="light" />
       {isSupabaseConfigured ? (
         <AuthProvider>
           <RemoteGate />

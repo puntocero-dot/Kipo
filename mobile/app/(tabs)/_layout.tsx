@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BankShieldIcon, FamilyTreeIcon, VoiceCaptureIcon } from '../../src/components/icons/FeatureIcons';
 import { useAccentColor } from '../../src/domain/accentStore';
 import { useKipo } from '../../src/domain/store';
-import { colors, fonts } from '../../src/theme';
+import { colors, fonts, glass } from '../../src/theme';
 
 function TabIcon({ name, focused, accent }: { name: keyof typeof Ionicons.glyphMap; focused: boolean; accent: string }) {
   return <Ionicons name={name} size={22} color={focused ? accent : colors.muted} />;
@@ -13,7 +15,16 @@ function TabIcon({ name, focused, accent }: { name: keyof typeof Ionicons.glyphM
 export default function TabsLayout() {
   const { state } = useKipo();
   const accent = useAccentColor();
+  const insets = useSafeAreaInsets();
   const pendingSms = state.smsInbox.filter((s) => s.status === 'pendiente').length;
+
+  // Altura y padding explícitos (en vez de dejar que @react-navigation calcule
+  // el suyo) rompen el ajuste automático por safe-area que la librería aplica
+  // por default — en un iPhone con indicador de inicio, la tab bar terminaba
+  // recortada/tapada contra ese borde, con los últimos íconos casi imposibles
+  // de tocar. Al fijar altura/padding a mano hay que sumar insets.bottom
+  // nosotros mismos para que vuelva a respetar esa zona segura.
+  const tabBarHeight = 54 + insets.bottom;
 
   return (
     <Tabs
@@ -24,13 +35,16 @@ export default function TabsLayout() {
         tabBarActiveTintColor: accent,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: 'transparent',
           borderTopWidth: 1,
-          borderTopColor: colors.gridline,
-          height: 64,
+          borderTopColor: glass.border,
+          height: tabBarHeight,
           paddingTop: 8,
-          paddingBottom: 10,
+          paddingBottom: insets.bottom + 6,
         },
+        tabBarBackground: () => (
+          <BlurView intensity={40} tint="dark" style={{ flex: 1, backgroundColor: glass.tabBarBg }} />
+        ),
         tabBarLabelStyle: { fontFamily: fonts.bodySemibold, fontSize: 11 },
         tabBarBadgeStyle: { backgroundColor: colors.critical, fontFamily: fonts.bodyBold, fontSize: 10 },
       }}

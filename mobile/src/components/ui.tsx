@@ -1,20 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useAccentColor } from '../domain/accentStore';
-import { colors, fonts, radius, shadow, spacing } from '../theme';
+import { colors, fonts, glass, pageGradient, radius, shadow, spacing } from '../theme';
 
-export function Screen({ children }: { children: React.ReactNode }) {
+// fabClearance: la única pantalla con un botón flotante fijo (Dashboard) lo
+// pasa para que el scroll nunca termine con esa última tarjeta pegada al
+// FAB — confirmado con captura en viewport de celular: con el padding fijo
+// de siempre, "Últimos movimientos" terminaba justo debajo del botón "+".
+export function Screen({ children, fabClearance = 0 }: { children: React.ReactNode; fabClearance?: number }) {
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.page }}
-      contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2, gap: spacing.md }}
-    >
-      {children}
-    </ScrollView>
+    <LinearGradient colors={pageGradient} style={{ flex: 1 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2 + fabClearance, gap: spacing.md }}
+      >
+        {children}
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
+// Vidrio esmerilado "liviano" (sin BlurView) — traslúcida sobre el degradado
+// de Screen de arriba, con un borde claro fino simulando el reflejo de
+// vidrio. Se usa BlurView de verdad (backdrop-filter real) solo donde hay
+// una sola instancia en pantalla (tab bar, modales) — repetirlo en cada
+// Card de una lista larga sería pesado en celulares de gama baja sin
+// aportar diferencia visible sobre un fondo que ya es un degradado suave.
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
@@ -90,11 +103,12 @@ export function EmptyState({ message, icon = 'leaf-outline' }: { message: string
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: glass.bg,
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: glass.border,
+    borderTopColor: glass.highlight,
     gap: spacing.sm,
     ...shadow.card,
   },
@@ -115,6 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     shadowColor: colors.primaryDeep,
     shadowOpacity: 0.28,
