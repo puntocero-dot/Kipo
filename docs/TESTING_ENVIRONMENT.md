@@ -78,6 +78,15 @@ de qué corre contra Postgres y qué sigue siendo local.
    aplicadas hasta hoy, útil como referencia rápida del esquema completo sin
    tener que sumar cada archivo mentalmente.
 
+   **Si en algún momento reseteas el schema `public` a mano**
+   (`drop schema public cascade; create schema public;`) para volver a pegar
+   `database/schema.sql` completo de una sola vez: eso borra también los
+   privilegios de tabla que Supabase le da por defecto a `anon`/
+   `authenticated` cuando crea el proyecto — sin ellos, la REST API responde
+   401/403 en todo aunque las políticas RLS estén bien. `database/schema.sql`
+   ya repone esos privilegios al inicio (ver `0025_restore_public_grants.sql`
+   si necesitas aplicarlo suelto sobre un proyecto que ya tenías migrado).
+
 3. **(Opcional) Carga la familia de prueba "Familia Pérez".** Pegar las
    migraciones en el SQL Editor no incluye `supabase/seed.sql` (ese archivo
    es aparte, pensado para `supabase db reset` en local o para correrlo a

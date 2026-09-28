@@ -13,6 +13,19 @@
 
 create extension if not exists "pgcrypto"; -- gen_random_uuid()
 
+-- Privilegios base de tabla/secuencia para anon/authenticated/service_role
+-- sobre el schema public. Un proyecto de Supabase nuevo ya trae esto puesto
+-- por la plataforma al crearse; se declara aquí explícito (idempotente) para
+-- que aplicar este archivo completo contra un schema public recién creado
+-- desde cero (drop schema public cascade; create schema public;) no deje la
+-- REST API respondiendo 401/403 por faltar el permiso base que Postgres
+-- exige antes de evaluar RLS — ver 0025_restore_public_grants.sql. A
+-- propósito no toca privilegios de funciones: cada función SECURITY DEFINER
+-- maneja su propio grant/revoke de EXECUTE más abajo.
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+
 -- ---------------------------------------------------------------------------
 -- Familias y usuarios
 -- ---------------------------------------------------------------------------
