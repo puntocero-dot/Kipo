@@ -94,9 +94,10 @@ la variable de entorno `GEMINI_API_KEY` de Vercel — si viviera en el
 cliente, cualquiera que descompile el APK podría extraerla y gastarla a
 nuestro nombre.
 
-El endpoint usa `gemini-2.5-flash-lite` (el más barato entre los comparados
-— Gemini/DeepSeek/Grok/Kimi — a fracciones de centavo por gasto) con salida
-estructurada (`responseSchema`): el modelo elige la categoría de una lista
+El endpoint usa `gemini-3.5-flash-lite` (el más barato entre los comparados
+— Gemini/DeepSeek/Grok/Kimi — a fracciones de centavo por gasto; se migró
+desde `gemini-2.5-flash-lite` cuando Google lo descontinuó para cuentas
+nuevas) con salida estructurada (`responseSchema`): el modelo elige la categoría de una lista
 cerrada que la app le manda en cada request (nunca inventa un `groupSlug`
 que no exista), y responde con `status: "ready"` (trae un draft completo) o
 `status: "needs_clarification"` (trae una sola pregunta corta).

@@ -15,7 +15,10 @@
 // Configurar en Vercel (Settings → Environment Variables):
 //   GEMINI_API_KEY = <tu API key de https://aistudio.google.com/apikey>
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+// gemini-2.5-flash-lite dejó de estar disponible para cuentas nuevas
+// (Gemini responde 404 y recomienda este reemplazo directo en el mensaje
+// de error).
+const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // Gemini rechaza (400) cualquier schema cuyo enum incluya un string vacío —
