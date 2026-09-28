@@ -7,7 +7,6 @@
   ],
   "headers": [
     {
-      "//": "Reglas generales (landing en la raíz) — permite Google Fonts y la propia función serverless /api/kipobot (misma familia de origen, ya cubierta por 'self').",
       "source": "/(.*)",
       "headers": [
         {
@@ -22,7 +21,6 @@
       ]
     },
     {
-      "//": "La app (Expo web export) no usa Google Fonts vía CDN (las carga empaquetadas) pero sí necesita hablar con Supabase — CSP más estricta y distinta a la de la landing, así que se declara aparte y sobreescribe la de arriba solo bajo /app/*.",
       "source": "/app/(.*)",
       "headers": [
         {
