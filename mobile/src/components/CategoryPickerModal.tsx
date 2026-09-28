@@ -146,6 +146,7 @@ const styles = StyleSheet.create({
   addForm: { gap: spacing.sm },
   input: {
     backgroundColor: colors.page,
+    color: colors.textPrimary,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 11,

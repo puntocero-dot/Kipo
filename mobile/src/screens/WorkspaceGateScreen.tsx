@@ -154,6 +154,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
   input: {
     backgroundColor: colors.page,
+    color: colors.textPrimary,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 11,
