@@ -114,12 +114,19 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     const [familyRes, membersRes, txRes, budgetsRes, remindersRes, rulesRes, accountsRes, goalsRes] = await Promise.all([
       supabase!.from('families').select('name, invite_code, base_currency, photo_url').eq('id', familyId).single(),
       supabase!.from('users').select('id, display_name, role, email, status, accent_color').eq('family_id', familyId),
-      supabase!.from('transactions').select('*').eq('family_id', familyId).order('occurred_at', { ascending: false }),
-      supabase!.from('budgets').select('*').eq('family_id', familyId),
-      supabase!.from('reminders').select('*').eq('family_id', familyId),
+      supabase!
+        .from('transactions')
+        .select('id, user_id, type, amount, currency, category_id, merchant, description, raw_text, source, status, occurred_at, metadata, account_id, budget_id')
+        .eq('family_id', familyId)
+        .order('occurred_at', { ascending: false }),
+      supabase!.from('budgets').select('id, name, category_kind, amount_limit, alert_threshold_pct').eq('family_id', familyId),
+      supabase!
+        .from('reminders')
+        .select('id, name, amount, recurrence, next_due_date, notify_days_before, is_active, category_id, account_id, last_paid_amount, last_paid_at, last_paid_transaction_id')
+        .eq('family_id', familyId),
       supabase!.from('categorization_rules').select('id, keyword, category_id').eq('family_id', familyId),
-      supabase!.from('accounts').select('*').eq('family_id', familyId),
-      supabase!.from('savings_goals').select('*').eq('family_id', familyId),
+      supabase!.from('accounts').select('id, name, type, bank_name, last_four, currency').eq('family_id', familyId),
+      supabase!.from('savings_goals').select('id, name, target_amount, saved_amount, account_id, target_date, is_active').eq('family_id', familyId),
     ]);
 
     const members: FamilyMember[] = (membersRes.data ?? []).map((r: any) => ({
@@ -252,7 +259,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             occurred_at: draft.occurredAt,
             metadata: { confidence: draft.confidence },
           })
-          .select()
+          .select('id, user_id, type, amount, currency, category_id, merchant, description, raw_text, source, status, occurred_at, metadata, account_id, budget_id')
           .single();
 
         if (!error && data) {
@@ -391,7 +398,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             const { data, error } = await supabase!
               .from('categorization_rules')
               .insert({ family_id: familyId, keyword: distinctiveWord, category_id: categoryId })
-              .select()
+              .select('id')
               .single();
             if (data) {
               // Reconciliar el id local temporal con el real — sin esto, la
@@ -431,7 +438,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             amount_limit: budget.amountLimit,
             alert_threshold_pct: budget.alertThresholdPct,
           })
-          .select()
+          .select('id, name, category_kind, amount_limit, alert_threshold_pct')
           .single();
         if (data) setState((prev) => ({ ...prev, budgets: [...prev.budgets, dbBudgetToApp(data)] }));
         else if (error) notify('No se pudo crear el presupuesto', error.message);
@@ -499,7 +506,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             category_id: categoryIdFor(catMapsRef.current, reminder.groupSlug, reminder.subSlug),
             account_id: reminder.accountId,
           })
-          .select()
+          .select('id, name, amount, recurrence, next_due_date, notify_days_before, is_active, category_id, account_id, last_paid_amount, last_paid_at, last_paid_transaction_id')
           .single();
         if (data) setState((prev) => ({ ...prev, reminders: [...prev.reminders, dbReminderToApp(data, catMapsRef.current)] }));
         else if (error) notify('No se pudo crear el recordatorio', error.message);
@@ -750,7 +757,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             name: label.trim(),
             is_system: false,
           })
-          .select()
+          .select('id, slug, name, kind')
           .single();
         if (data) {
           catMapsRef.current.idToSlug.set(data.id, { groupSlug, subSlug: data.slug });
@@ -786,7 +793,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             last_four: account.lastFour,
             currency: account.currency,
           })
-          .select()
+          .select('id, name, type, bank_name, last_four, currency')
           .single();
         if (data) setState((prev) => ({ ...prev, accounts: [...prev.accounts, dbAccountToApp(data)] }));
         else if (error) notify('No se pudo agregar la cuenta', error.message);
@@ -826,7 +833,7 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
             target_date: goal.targetDate,
             is_active: goal.isActive,
           })
-          .select()
+          .select('id, name, target_amount, saved_amount, account_id, target_date, is_active')
           .single();
         if (data) setState((prev) => ({ ...prev, savingsGoals: [...prev.savingsGoals, dbSavingsGoalToApp(data)] }));
         else if (error) notify('No se pudo crear la meta de ahorro', error.message);

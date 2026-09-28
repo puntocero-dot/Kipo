@@ -42,7 +42,7 @@ create table users (
   -- de marca por defecto (ver mobile/src/domain/accentStore.tsx).
   accent_color  text,
   -- 'suspended' pierde acceso a los datos de la familia en la siguiente
-  -- consulta (ver my_family_ids() más abajo) — solo un admin puede
+  -- consulta (ver private.my_family_ids() más abajo) — solo un admin puede
   -- cambiarlo, vía set_member_status(). No es un borrado físico.
   status        text not null default 'active' check (status in ('active', 'suspended')),
   created_at    timestamptz not null default now()
@@ -80,7 +80,7 @@ create table categories (
 );
 
 -- Sin este índice, select_categories (RLS) evalúa "family_id in (select
--- my_family_ids())" con un escaneo completo de la tabla en cada consulta —
+-- private.my_family_ids())" con un escaneo completo de la tabla en cada consulta —
 -- fetchCategoryMaps() en mobile/src/domain/categoriesRemote.ts trae la tabla
 -- entera sin filtrar del lado del cliente, así que esto es lo único que
 -- acota la búsqueda a nivel de Postgres.
@@ -261,9 +261,20 @@ create table sync_log (
 -- en "infinite recursion detected in policy for relation users". Al ser
 -- `security definer`, estas funciones corren como dueñas de la tabla (sin
 -- RLS de por medio) — mismo resultado, sin el ciclo.
+--
+-- Viven en `private`, no en `public`: PostgREST solo expone endpoints
+-- `/rest/v1/rpc/...` para funciones en schemas expuestos, y estas tres no
+-- son para que el cliente las llame directo — son puro apoyo de policies.
+-- `security definer` + schema no expuesto = siguen corriendo sin RLS de por
+-- medio (evitan la recursión) pero no quedan publicadas como RPC (ver
+-- migración 0024_private_rls_helpers.sql).
 -- ---------------------------------------------------------------------------
 
-create or replace function my_family_ids()
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
+
+create or replace function private.my_family_ids()
 returns setof uuid
 language sql
 security definer
@@ -273,7 +284,7 @@ as $$
   select family_id from users where auth_user_id = auth.uid() and status = 'active';
 $$;
 
-create or replace function my_admin_family_ids()
+create or replace function private.my_admin_family_ids()
 returns setof uuid
 language sql
 security definer
@@ -283,7 +294,7 @@ as $$
   select family_id from users where auth_user_id = auth.uid() and role = 'admin' and status = 'active';
 $$;
 
-create or replace function my_membership_ids()
+create or replace function private.my_membership_ids()
 returns setof uuid
 language sql
 security definer
@@ -293,21 +304,21 @@ as $$
   select id from users where auth_user_id = auth.uid() and status = 'active';
 $$;
 
-grant execute on function my_family_ids() to authenticated;
-grant execute on function my_admin_family_ids() to authenticated;
-grant execute on function my_membership_ids() to authenticated;
+grant execute on function private.my_family_ids() to authenticated;
+grant execute on function private.my_admin_family_ids() to authenticated;
+grant execute on function private.my_membership_ids() to authenticated;
 -- Postgres otorga EXECUTE a PUBLIC (incluye `anon`) por defecto al crear
 -- una función — se revoca explícitamente (ver migración 0018_lint_hardening.sql).
-revoke execute on function my_family_ids() from public;
-revoke execute on function my_admin_family_ids() from public;
-revoke execute on function my_membership_ids() from public;
+revoke execute on function private.my_family_ids() from public;
+revoke execute on function private.my_admin_family_ids() from public;
+revoke execute on function private.my_membership_ids() from public;
 -- El setup por defecto de un proyecto Supabase otorga EXECUTE directo a
 -- `anon`/`authenticated` (vía `alter default privileges`), no a través de
 -- `public` — revocar de `public` no basta, hay que revocar de `anon`
 -- también (ver migración 0019_revoke_anon_execute.sql).
-revoke execute on function my_family_ids() from anon;
-revoke execute on function my_admin_family_ids() from anon;
-revoke execute on function my_membership_ids() from anon;
+revoke execute on function private.my_family_ids() from anon;
+revoke execute on function private.my_admin_family_ids() from anon;
+revoke execute on function private.my_membership_ids() from anon;
 
 alter table transactions enable row level security;
 alter table budgets enable row level security;
@@ -323,22 +334,22 @@ alter table sync_log enable row level security;
 alter table savings_goals enable row level security;
 
 create policy family_isolation_transactions on transactions
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy family_isolation_budgets on budgets
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy family_isolation_savings_goals on savings_goals
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy family_isolation_reminders on reminders
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy members_see_own_families on families
-  for select using (id in (select my_family_ids()));
+  for select using (id in (select private.my_family_ids()));
 
 create policy admins_update_own_family on families
-  for update using (id in (select my_admin_family_ids()));
+  for update using (id in (select private.my_admin_family_ids()));
 
 -- El invite_code solo debe cambiar vía regenerate_invite_code() (más abajo)
 -- — admins_update_own_family sigue permitiendo que un admin edite directo
@@ -367,7 +378,7 @@ create trigger trg_prevent_direct_invite_code_change
 -- create_family_and_join/join_family_by_invite (security definer), nunca
 -- insertando family_id a mano desde el cliente.
 create policy members_see_peers on users
-  for select using (family_id in (select my_family_ids()));
+  for select using (family_id in (select private.my_family_ids()));
 
 create policy users_update_own_row on users
   for update using (auth_user_id = auth.uid());
@@ -411,40 +422,40 @@ create trigger trg_prevent_users_privilege_escalation
 -- sistema) y escritura (solo tus propias filas, nunca family_id null) —
 -- una sola policy sin `for` dejaba que cualquiera escribiera sobre el
 -- catálogo global compartido (ver migración 0006_security_hardening.sql).
--- Escritura restringida a admin (my_admin_family_ids(), no my_family_ids())
+-- Escritura restringida a admin (private.my_admin_family_ids(), no private.my_family_ids())
 -- — la UI ya solo le ofrece "+ Agregar categoría" a un admin
 -- (CategoryPickerModal.tsx); sin este chequeo en la RLS, cualquier miembro
 -- podía saltarse esa restricción llamando el insert directo (ver migración
 -- 0020_categories_admin_only.sql).
 create policy select_categories on categories
-  for select using (family_id is null or family_id in (select my_family_ids()));
+  for select using (family_id is null or family_id in (select private.my_family_ids()));
 create policy insert_own_categories on categories
-  for insert with check (family_id in (select my_admin_family_ids()));
+  for insert with check (family_id in (select private.my_admin_family_ids()));
 create policy update_own_categories on categories
-  for update using (family_id in (select my_admin_family_ids()));
+  for update using (family_id in (select private.my_admin_family_ids()));
 create policy delete_own_categories on categories
-  for delete using (family_id in (select my_admin_family_ids()));
+  for delete using (family_id in (select private.my_admin_family_ids()));
 
 create policy family_isolation_accounts on accounts
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 create policy select_categorization_rules on categorization_rules
-  for select using (family_id is null or family_id in (select my_family_ids()));
+  for select using (family_id is null or family_id in (select private.my_family_ids()));
 create policy insert_own_categorization_rules on categorization_rules
-  for insert with check (family_id in (select my_family_ids()));
+  for insert with check (family_id in (select private.my_family_ids()));
 create policy update_own_categorization_rules on categorization_rules
-  for update using (family_id in (select my_family_ids()));
+  for update using (family_id in (select private.my_family_ids()));
 create policy delete_own_categorization_rules on categorization_rules
-  for delete using (family_id in (select my_family_ids()));
+  for delete using (family_id in (select private.my_family_ids()));
 
 create policy own_devices on devices
-  using (user_id in (select my_membership_ids()));
+  using (user_id in (select private.my_membership_ids()));
 
 create policy family_isolation_budget_alerts on budget_alerts_log
-  using (budget_id in (select id from budgets where family_id in (select my_family_ids())));
+  using (budget_id in (select id from budgets where family_id in (select private.my_family_ids())));
 
 create policy family_isolation_sync_log on sync_log
-  using (family_id in (select my_family_ids()));
+  using (family_id in (select private.my_family_ids()));
 
 -- ---------------------------------------------------------------------------
 -- Alta de membresía (crear familia / unirse por código de invitación).
@@ -529,7 +540,7 @@ as $$
 declare
   new_code text;
 begin
-  if not exists (select 1 from my_admin_family_ids() f where f = target_family_id) then
+  if not exists (select 1 from private.my_admin_family_ids() f where f = target_family_id) then
     raise exception 'Solo un administrador de la familia puede regenerar el código.';
   end if;
 
@@ -646,7 +657,7 @@ begin
   if target_family is null then
     raise exception 'Miembro no encontrado.';
   end if;
-  if not exists (select 1 from my_admin_family_ids() f where f = target_family) then
+  if not exists (select 1 from private.my_admin_family_ids() f where f = target_family) then
     raise exception 'Solo un administrador puede cambiar el estado de un miembro.';
   end if;
 
@@ -672,15 +683,19 @@ revoke execute on function set_member_status(uuid, text) from anon;
 -- llevan policy de SELECT: una policy de SELECT sin restricción solo serviría
 -- para listar todos los archivos del bucket vía la API, no hace falta (ver
 -- Database Linter → public_bucket_allows_listing, migración
--- 0018_lint_hardening.sql).
+-- 0018_lint_hardening.sql). `file_size_limit`/`allowed_mime_types`: sin
+-- esto, Storage aceptaba cualquier tamaño y cualquier tipo de archivo (un
+-- video de 500MB, un HTML) desde una cuenta con permiso de escritura — cap a
+-- 5MB y solo imágenes (migración 0023_bucket_upload_limits.sql), mismo
+-- límite que valida el cliente antes de subir (mobile/src/lib/imageUpload.ts).
 -- ---------------------------------------------------------------------------
 
-insert into storage.buckets (id, name, public)
-values ('branding', 'branding', true)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('branding', 'branding', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do nothing;
 
-insert into storage.buckets (id, name, public)
-values ('family-photos', 'family-photos', true)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('family-photos', 'family-photos', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do nothing;
 
 create policy branding_owner_write on storage.objects
@@ -691,7 +706,7 @@ create policy branding_owner_update on storage.objects
 -- Convención de ruta: family-photos/<family_id>/photo.jpg
 create policy family_photos_admin_write on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'family-photos' and (storage.foldername(name))[1]::uuid in (select my_admin_family_ids()));
+  with check (bucket_id = 'family-photos' and (storage.foldername(name))[1]::uuid in (select private.my_admin_family_ids()));
 create policy family_photos_admin_update on storage.objects
   for update to authenticated
-  using (bucket_id = 'family-photos' and (storage.foldername(name))[1]::uuid in (select my_admin_family_ids()));
+  using (bucket_id = 'family-photos' and (storage.foldername(name))[1]::uuid in (select private.my_admin_family_ids()));
