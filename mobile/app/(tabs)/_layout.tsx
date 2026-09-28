@@ -3,9 +3,8 @@ import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BankShieldIcon, FamilyTreeIcon, VoiceCaptureIcon } from '../../src/components/icons/FeatureIcons';
+import { FamilyTreeIcon, VoiceCaptureIcon } from '../../src/components/icons/FeatureIcons';
 import { useAccentColor } from '../../src/domain/accentStore';
-import { useKipo } from '../../src/domain/store';
 import { colors, fonts, glass } from '../../src/theme';
 
 function TabIcon({ name, focused, accent }: { name: keyof typeof Ionicons.glyphMap; focused: boolean; accent: string }) {
@@ -13,10 +12,8 @@ function TabIcon({ name, focused, accent }: { name: keyof typeof Ionicons.glyphM
 }
 
 export default function TabsLayout() {
-  const { state } = useKipo();
   const accent = useAccentColor();
   const insets = useSafeAreaInsets();
-  const pendingSms = state.smsInbox.filter((s) => s.status === 'pendiente').length;
 
   // Altura y padding explícitos (en vez de dejar que @react-navigation calcule
   // el suyo) rompen el ajuste automático por safe-area que la librería aplica
@@ -63,15 +60,6 @@ export default function TabsLayout() {
           title: 'Registrar gasto',
           tabBarLabel: 'Registrar',
           tabBarIcon: ({ focused }) => <VoiceCaptureIcon size={22} color={focused ? accent : colors.muted} />,
-        }}
-      />
-      <Tabs.Screen
-        name="sms"
-        options={{
-          title: 'Bandeja de SMS',
-          tabBarLabel: 'SMS',
-          tabBarIcon: ({ focused }) => <BankShieldIcon size={22} color={focused ? accent : colors.muted} />,
-          tabBarBadge: pendingSms > 0 ? pendingSms : undefined,
         }}
       />
       <Tabs.Screen

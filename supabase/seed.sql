@@ -57,8 +57,3 @@ values
   ('11111111-1111-1111-1111-111111111111', (select id from categories where slug = 'servicios'), 'Internet', 45, 'mensual', (current_date + 3), 3),
   ('11111111-1111-1111-1111-111111111111', (select id from categories where slug = 'colegiaturas'), 'Colegiatura', 300, 'mensual', (current_date + 6), 5),
   ('11111111-1111-1111-1111-111111111111', (select id from categories where slug = 'seguros'), 'Seguro del carro', 60, 'mensual', (current_date + 20), 5);
-
-insert into sms_inbox (user_id, raw_sms, parsed_amount, parsed_merchant, parsed_transaction_type, confidence, status)
-values
-  ('22222222-2222-2222-2222-222222222222', 'Compra aprobada por $18.50 en CAFETERIA EXPRESS el ' || to_char(now(), 'DD/MM'), 18.50, 'Cafeteria Express', 'compra', 'high', 'pendiente'),
-  ('33333333-3333-3333-3333-333333333333', 'Su tarjeta terminada en 4521 fue debitada por $65.00 en SUPERMERCADO LA COLONIA', 65.00, 'Supermercado La Colonia', 'compra', 'high', 'pendiente');

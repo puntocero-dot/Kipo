@@ -27,15 +27,15 @@
       <li><strong>Cuenta:</strong> correo electrónico y contraseña (la contraseña nunca se guarda en texto plano; la gestiona nuestro proveedor de autenticación, Supabase).</li>
       <li><strong>Datos financieros que tú registras:</strong> montos, descripciones, categorías y fechas de tus gastos e ingresos, presupuestos, metas de ahorro y recordatorios de pago. Nunca te pedimos el número completo de una tarjeta — como mucho, los últimos 4 dígitos que tú decidas anotar para identificar una cuenta.</li>
       <li><strong>Datos de familia:</strong> nombre de la familia, foto (opcional), miembros y sus roles, código de invitación.</li>
-      <li><strong>Alertas SMS bancarias (solo Android, solo con tu permiso explícito):</strong> si activas el permiso de lectura de SMS, Kipo procesa el texto de los mensajes de tu banco <em>en tu propio dispositivo</em> para sugerirte un gasto automáticamente. Ese texto no se envía a nuestros servidores tal cual — solo se guarda el gasto ya interpretado (monto, comercio, fecha) una vez que tú lo confirmas.</li>
-      <li><strong>Conversaciones con Kipobot (el asistente de este sitio):</strong> los mensajes que le escribes al asistente de la landing se procesan para generar una respuesta y no se asocian a tu cuenta de la app.</li>
+      <li><strong>Mensajes que le escribes a Kipobot dentro de la app:</strong> cuando registras un gasto contándoselo a Kipobot, ese texto se envía a nuestro proveedor de IA (Google Gemini) únicamente para interpretar el monto y la categoría — no se usa para entrenar modelos de terceros ni se comparte con nadie más.</li>
+      <li><strong>Conversaciones con Kipobot en este sitio (landing):</strong> los mensajes que le escribes al asistente de la landing se procesan para generar una respuesta y no se asocian a tu cuenta de la app.</li>
     </ul>
 
     <h2>2. Para qué usamos tus datos</h2>
     <p>Únicamente para operar Kipo: mostrarte tu historial y tus resúmenes, calcular presupuestos, enviarte recordatorios y permitir que los miembros de tu familia vean el mismo balance. No usamos tus datos financieros para publicidad ni los vendemos a nadie.</p>
 
     <h2>3. Con quién compartimos datos</h2>
-    <p>Con nadie fuera de los miembros de tu propia familia dentro de la app. Usamos proveedores de infraestructura que procesan datos en nuestro nombre bajo sus propios acuerdos de confidencialidad: Supabase (base de datos, autenticación y almacenamiento de archivos) y Google (API de Gemini, únicamente para las conversaciones del asistente Kipobot de este sitio, no para tus datos financieros dentro de la app).</p>
+    <p>Con nadie fuera de los miembros de tu propia familia dentro de la app. Usamos proveedores de infraestructura que procesan datos en nuestro nombre bajo sus propios acuerdos de confidencialidad: Supabase (base de datos, autenticación y almacenamiento de archivos) y Google (API de Gemini, para interpretar los gastos que le cuentas a Kipobot dentro de la app y para las conversaciones del asistente de este sitio).</p>
 
     <h2>4. Seguridad</h2>
     <p>Cada familia tiene sus datos aislados mediante reglas de seguridad a nivel de base de datos (row level security): solo los miembros que tú invitas con tu código de familia pueden ver esa información. Las conexiones viajan cifradas (HTTPS/TLS).</p>

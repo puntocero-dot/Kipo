@@ -197,14 +197,6 @@ export default function FamilyScreen() {
         </Card>
       )}
 
-      <Card>
-        <SectionTitle icon="phone-portrait-outline">Lector de SMS (Android)</SectionTitle>
-        <Text style={styles.meta}>
-          En una build nativa de Android, cada dispositivo puede activar/desactivar el permiso de lectura de SMS desde
-          aquí. En iOS, el equivalente es compartir manualmente la notificación bancaria — ver la pestaña "SMS" para
-          simularlo en este ambiente de pruebas.
-        </Text>
-      </Card>
     </Screen>
   );
 }

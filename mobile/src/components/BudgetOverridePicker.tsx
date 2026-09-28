@@ -16,7 +16,7 @@ interface Props {
 // cualquier presupuesto activo (no solo el de su categoría), con el
 // presupuesto de la categoría pre-elegido como sugerencia y una previsualización
 // en vivo de cómo queda ese presupuesto con este gasto sumado. Compartido entre
-// ConfirmCaptureCard (captura por chat/manual) y el paso de confirmación de SMS.
+// ConfirmCaptureCard (captura por chat/manual).
 export function BudgetOverridePicker({ groupSlug, amount, value, onChange }: Props) {
   const { state } = useKipo();
   const defaultBudgetId = resolveDefaultBudgetId(state.budgets, groupSlug);

@@ -1,7 +1,7 @@
 -- Kipo — Esquema de base de datos (PostgreSQL, ej. Supabase)
 -- Diseñado para: cuentas familiares multiusuario, offline-first con
 -- sincronización, categorización jerárquica con contexto social, entrada por
--- SMS/chat/voz, presupuestos y recordatorios.
+-- chat/voz interpretada con IA, presupuestos y recordatorios.
 --
 -- Notas de portabilidad a SQLite (cliente offline):
 --   - uuid            -> TEXT (uuid generado en el cliente)
@@ -56,7 +56,6 @@ create table devices (
   user_id       uuid not null references users(id) on delete cascade,
   platform      text not null check (platform in ('android', 'ios')),
   push_token    text,
-  sms_reader_enabled boolean not null default false, -- solo aplica/tiene efecto en android
   created_at    timestamptz not null default now()
 );
 
@@ -87,7 +86,7 @@ create table categories (
 -- acota la búsqueda a nivel de Postgres.
 create index idx_categories_family on categories (family_id);
 
--- Palabras clave que alimentan el parser de texto/SMS. Las del sistema tienen
+-- Palabras clave que alimentan el parser de texto/Kipobot. Las del sistema tienen
 -- family_id null; una familia puede agregar sinónimos propios (p. ej. el
 -- nombre de su restaurante favorito) sin tocar el código.
 create table categorization_rules (
@@ -142,35 +141,11 @@ create table transactions (
   occurred_at     timestamptz not null default now(),
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
-  metadata        jsonb not null default '{}'::jsonb -- ej. confidence del parser, sms_inbox_id de origen
+  metadata        jsonb not null default '{}'::jsonb -- ej. confidence del parser/bot con IA
 );
 
 create index idx_transactions_family_month on transactions (family_id, occurred_at desc);
 create index idx_transactions_category on transactions (category_id);
-
--- ---------------------------------------------------------------------------
--- Bandeja de SMS bancarios detectados (Android). Cada fila es una sugerencia
--- pendiente de confirmar; al confirmarla se crea/vincula un registro en
--- `transactions` con source = 'sms'.
--- ---------------------------------------------------------------------------
-
-create table sms_inbox (
-  id                    uuid primary key default gen_random_uuid(),
-  user_id               uuid not null references users(id) on delete cascade,
-  device_id             uuid references devices(id) on delete set null,
-  raw_sms               text not null,
-  bank_pattern_id       text, -- id de la regla usada en smsParser.mjs, null = fallback genérico
-  parsed_amount         numeric(12,2),
-  parsed_merchant       text,
-  parsed_transaction_type text check (parsed_transaction_type in ('compra', 'retiro', 'pago', 'deposito')),
-  confidence            text not null check (confidence in ('high', 'medium', 'low', 'none')),
-  status                text not null default 'pendiente' check (status in ('pendiente', 'confirmado', 'descartado', 'duplicado')),
-  matched_transaction_id uuid references transactions(id) on delete set null,
-  received_at           timestamptz not null default now(),
-  created_at            timestamptz not null default now()
-);
-
-create index idx_sms_inbox_pending on sms_inbox (user_id, status) where status = 'pendiente';
 
 -- ---------------------------------------------------------------------------
 -- Presupuestos y alertas
@@ -337,7 +312,6 @@ revoke execute on function my_membership_ids() from anon;
 alter table transactions enable row level security;
 alter table budgets enable row level security;
 alter table reminders enable row level security;
-alter table sms_inbox enable row level security;
 alter table families enable row level security;
 alter table users enable row level security;
 alter table categories enable row level security;
@@ -359,9 +333,6 @@ create policy family_isolation_savings_goals on savings_goals
 
 create policy family_isolation_reminders on reminders
   using (family_id in (select my_family_ids()));
-
-create policy own_sms_inbox on sms_inbox
-  using (user_id in (select my_membership_ids()));
 
 create policy members_see_own_families on families
   for select using (id in (select my_family_ids()));

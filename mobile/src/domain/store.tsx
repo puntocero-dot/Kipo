@@ -5,10 +5,10 @@ import { GROUP_TO_KIND } from './categoriesRemote';
 import { colors, groupColors } from '../theme';
 import { makeId } from './id';
 import { KipoContext, type KipoContextValue } from './kipoContext';
-import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
+import { parseExpenseWithFamilyRules } from './parsing';
 import { shiftByRecurrence } from './selectors';
 import { buildSeedState } from './seed';
-import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
+import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, Transaction, TransactionDraft } from './types';
 
 const STORAGE_KEY = 'kipo:test-data:v1';
 
@@ -48,11 +48,12 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
   }, [state]);
 
-  const addTransactionFromText = useCallback(
-    (text: string, userId: string = currentUserId): Transaction => {
+  // Guarda un draft ya interpretado (por el parser local o por el bot con
+  // IA — ver src/lib/aiExpense.ts) sin importar cuál de los dos lo produjo.
+  const addTransactionFromDraft = useCallback(
+    (draft: TransactionDraft, userId: string = currentUserId): Transaction => {
       let created!: Transaction;
       setState((prev) => {
-        const draft = parseExpenseWithFamilyRules(text, prev.categorizationRules);
         created = {
           id: makeId('tx'),
           userId,
@@ -74,6 +75,16 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       return created;
     },
     [currentUserId],
+  );
+
+  // Respaldo instantáneo y sin red — Kipobot (chat.tsx) recurre a esto si el
+  // bot con IA no responde, y es el único camino en el ambiente 100% local.
+  const addTransactionFromText = useCallback(
+    (text: string, userId: string = currentUserId): Transaction => {
+      const draft = parseExpenseWithFamilyRules(text, state.categorizationRules);
+      return addTransactionFromDraft(draft, userId);
+    },
+    [state.categorizationRules, addTransactionFromDraft],
   );
 
   const updateTransaction = useCallback((id: string, patch: Partial<Transaction>) => {
@@ -119,67 +130,6 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       const rule: CategorizationRule = { id: makeId('rule'), keyword: distinctiveWord, groupSlug, subSlug };
       return { ...prev, transactions, categorizationRules: [rule, ...prev.categorizationRules] };
     });
-  }, []);
-
-  // Simula la llegada de un SMS bancario — sustituye al listener nativo de
-  // Android (que no puede ejercitarse en este entorno de pruebas web) sin
-  // cambiar el parser real: es exactamente `parseBankSms` de src/parsing.
-  const simulateIncomingSms = useCallback((rawSms: string): SmsSuggestion => {
-    const parsed = parseBankSms(rawSms);
-    const suggestion: SmsSuggestion = {
-      id: makeId('sms'),
-      rawSms: parsed.raw_sms,
-      parsedAmount: parsed.amount,
-      parsedMerchant: parsed.merchant,
-      transactionType: parsed.transaction_type as SmsSuggestion['transactionType'],
-      confidence: parsed.confidence as SmsSuggestion['confidence'],
-      status: 'pendiente',
-      receivedAt: parsed.occurred_at,
-    };
-    setState((prev) => ({ ...prev, smsInbox: [suggestion, ...prev.smsInbox] }));
-    return suggestion;
-  }, []);
-
-  const confirmSms = useCallback(
-    (id: string, overrides: Partial<Transaction> = {}) => {
-      setState((prev) => {
-        const sms = prev.smsInbox.find((s) => s.id === id);
-        if (!sms) return prev;
-        const isIncome = sms.transactionType === 'deposito';
-        const transaction: Transaction = {
-          id: makeId('tx'),
-          userId: overrides.userId ?? currentUserId,
-          type: overrides.type ?? (isIncome ? 'ingreso' : 'gasto'),
-          amount: overrides.amount ?? sms.parsedAmount ?? 0,
-          currency: prev.baseCurrency,
-          groupSlug: overrides.groupSlug ?? null,
-          subSlug: overrides.subSlug ?? null,
-          merchant: overrides.merchant ?? sms.parsedMerchant,
-          description: overrides.description ?? sms.parsedMerchant ?? (isIncome ? 'Depósito bancario' : 'Compra con tarjeta'),
-          rawText: sms.rawSms,
-          source: 'sms',
-          status: 'confirmado',
-          occurredAt: overrides.occurredAt ?? sms.receivedAt,
-          accountId: overrides.accountId ?? null,
-          budgetId: overrides.budgetId ?? null,
-        };
-        return {
-          ...prev,
-          transactions: [transaction, ...prev.transactions],
-          smsInbox: prev.smsInbox.map((s) =>
-            s.id === id ? { ...s, status: 'confirmado', matchedTransactionId: transaction.id } : s,
-          ),
-        };
-      });
-    },
-    [currentUserId],
-  );
-
-  const discardSms = useCallback((id: string) => {
-    setState((prev) => ({
-      ...prev,
-      smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'descartado' } : s)),
-    }));
   }, []);
 
   const addBudget = useCallback((budget: Omit<Budget, 'id'>) => {
@@ -361,13 +311,11 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       currentUserId,
       setCurrentUserId,
       addTransactionFromText,
+      addTransactionFromDraft,
       updateTransaction,
       confirmTransaction,
       deleteTransaction,
       correctCategory,
-      simulateIncomingSms,
-      confirmSms,
-      discardSms,
       addBudget,
       updateBudget,
       removeBudget,
@@ -393,13 +341,11 @@ export function KipoProvider({ children }: { children: React.ReactNode }) {
       loading,
       currentUserId,
       addTransactionFromText,
+      addTransactionFromDraft,
       updateTransaction,
       confirmTransaction,
       deleteTransaction,
       correctCategory,
-      simulateIncomingSms,
-      confirmSms,
-      discardSms,
       addBudget,
       updateBudget,
       removeBudget,

@@ -4,6 +4,10 @@
 
 import type { CategoryOption } from './categories';
 
+// 'sms' se mantiene en la unión únicamente para que las transacciones
+// históricas creadas cuando existía la bandeja de SMS (ver git log si hace
+// falta el detalle) se sigan mostrando bien en TransactionRow — no hay
+// ninguna forma en la UI de crear una nueva con ese origen.
 export type TransactionSource = 'chat' | 'voz' | 'sms' | 'manual' | 'recurrente';
 export type TransactionStatus = 'confirmado' | 'pendiente';
 export type Confidence = 'high' | 'medium' | 'low' | 'none';
@@ -92,16 +96,22 @@ export interface Reminder {
   lastPaidTransactionId: string | null; // permite deshacer el último pago
 }
 
-export interface SmsSuggestion {
-  id: string;
-  rawSms: string;
-  parsedAmount: number | null;
-  parsedMerchant: string | null;
-  transactionType: 'compra' | 'retiro' | 'pago' | 'deposito';
+// Forma común de un gasto/ingreso ya interpretado pero sin guardar todavía —
+// la produce tanto el parser local por reglas (parseExpenseWithFamilyRules,
+// instantáneo, usado si el bot con IA no responde) como el bot con IA
+// (ver src/lib/aiExpense.ts) para que addTransactionFromDraft() en el store
+// no necesite saber cuál de los dos lo generó.
+export interface TransactionDraft {
+  type: 'gasto' | 'ingreso';
+  amount: number | null;
+  merchant: string | null;
+  description: string;
+  occurredAt: string;
+  groupSlug: string | null;
+  subSlug: string | null;
   confidence: Confidence;
-  status: 'pendiente' | 'confirmado' | 'descartado';
-  receivedAt: string;
-  matchedTransactionId?: string;
+  needsReview: boolean;
+  rawText: string;
 }
 
 export interface CategorizationRule {
@@ -120,7 +130,6 @@ export interface KipoState {
   transactions: Transaction[];
   budgets: Budget[];
   reminders: Reminder[];
-  smsInbox: SmsSuggestion[];
   categorizationRules: CategorizationRule[];
   accounts: Account[];
   savingsGoals: SavingsGoal[];

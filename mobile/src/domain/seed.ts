@@ -4,8 +4,8 @@
 // semilla también sirve para validar visualmente que el parser categoriza
 // bien, no son datos inventados a mano desconectados de la lógica real.
 import { makeId } from './id';
-import { parseExpenseWithFamilyRules, parseBankSms } from './parsing';
-import type { Account, Budget, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
+import { parseExpenseWithFamilyRules } from './parsing';
+import type { Account, Budget, FamilyMember, KipoState, Reminder, SavingsGoal, Transaction } from './types';
 
 // La semilla se ve bien sin importar qué día del mes se ejecute la demo: los
 // 34 mensajes se reparten proporcionalmente entre el día 1 y "hoy" del mes en
@@ -221,23 +221,6 @@ function buildSeedSavingsGoals(accounts: Account[]): SavingsGoal[] {
   ];
 }
 
-function buildSeedSmsInbox(): SmsSuggestion[] {
-  const raw1 = 'Compra aprobada por $18.50 en CAFETERIA EXPRESS el ' + new Date().toLocaleDateString('es-GT');
-  const raw2 = 'Su tarjeta terminada en 4521 fue debitada por $65.00 en SUPERMERCADO LA COLONIA';
-  const p1 = parseBankSms(raw1);
-  const p2 = parseBankSms(raw2);
-  return [p1, p2].map((p) => ({
-    id: makeId('sms'),
-    rawSms: p.raw_sms,
-    parsedAmount: p.amount,
-    parsedMerchant: p.merchant,
-    transactionType: p.transaction_type as SmsSuggestion['transactionType'],
-    confidence: p.confidence as SmsSuggestion['confidence'],
-    status: 'pendiente',
-    receivedAt: p.occurred_at,
-  }));
-}
-
 export function buildSeedState(): KipoState {
   const members: FamilyMember[] = [
     { id: ANA, name: 'Ana Pérez', role: 'admin', status: 'active' },
@@ -255,7 +238,6 @@ export function buildSeedState(): KipoState {
     transactions: buildSeedTransactions(),
     budgets: buildSeedBudgets(),
     reminders: buildSeedReminders(accounts),
-    smsInbox: buildSeedSmsInbox(),
     categorizationRules: [],
     accounts,
     savingsGoals: buildSeedSavingsGoals(accounts),

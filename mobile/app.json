@@ -14,7 +14,6 @@
     },
     "android": {
       "package": "dev.puntocero.kipo",
-      "permissions": ["RECEIVE_SMS", "READ_SMS"],
       "adaptiveIcon": {
         "backgroundColor": "#123F37",
         "foregroundImage": "./assets/android-icon-foreground.png",

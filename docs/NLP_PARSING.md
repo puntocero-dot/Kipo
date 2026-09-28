@@ -1,10 +1,15 @@
-# Kipo — Parsing de lenguaje natural y SMS
+# Kipo — Parsing de lenguaje natural y captura con IA
+
+> La lectura de SMS bancarios que documentaba antes esta página se quitó por
+> completo de la app (reemplazada por Kipobot, ver §2 más abajo) — el
+> permiso de Android, la pantalla y las tablas asociadas ya no existen.
+> `src/parsing/smsParser.mjs` se deja en el repo solo como referencia/demo
+> ejecutable (`examples/demo.mjs`), pero ninguna pantalla de la app lo llama.
 
 Implementación de referencia (ejecutable, sin dependencias):
 
 - [`src/parsing/categoryDictionary.mjs`](../src/parsing/categoryDictionary.mjs) — diccionario de categorías/palabras clave
-- [`src/parsing/expenseTextParser.mjs`](../src/parsing/expenseTextParser.mjs) — parser de texto/voz
-- [`src/parsing/smsParser.mjs`](../src/parsing/smsParser.mjs) — parser de SMS bancarios
+- [`src/parsing/expenseTextParser.mjs`](../src/parsing/expenseTextParser.mjs) — parser de texto/voz (respaldo local, sin red)
 - [`examples/demo.mjs`](../examples/demo.mjs) — demo ejecutable: `node examples/demo.mjs`
 
 ## 1. Parser de texto natural (chat / dictado por voz)
@@ -57,41 +62,6 @@ hay conexión — evita depender de red para la acción más frecuente de la app
 
 (Verificado ejecutando `node examples/demo.mjs`.)
 
-### Fallback LLM (casos ambiguos, ej. "Compras varias $60")
-
-Cuando `confidence !== 'high'` y hay red, se envía un prompt estructurado a
-Claude (vía una Edge Function de Supabase, nunca desde el cliente para no
-exponer la API key) pidiendo **solo JSON**:
-
-```
-Eres un clasificador de gastos personales para una app familiar. Dado un
-mensaje de texto libre, extrae los campos y responde ÚNICAMENTE con JSON
-válido, sin explicación:
-
-{
-  "amount": number | null,
-  "merchant": string | null,
-  "category_kind": "fijo" | "necesario" | "transporte" | "alimentacion_fuera" | "salidas_convivencia" | null,
-  "category_subslug": string | null,
-  "social_context": "familia" | "pareja" | "amigos" | null
-}
-
-Reglas:
-- Si el mensaje menciona a la pareja/esposa/esposo, cónyuge o una cita, el
-  contexto social es "pareja" y la categoría es "salidas_convivencia".
-- Si menciona hijos/niños/familia, el contexto es "familia".
-- Si menciona amigos, el contexto es "amigos".
-- Si no hay contexto social explícito, clasifica por el tipo de gasto
-  (comida, transporte, etc.) usando las categorías de Kipo.
-- No inventes un monto si no aparece un número en el texto.
-
-Mensaje: "{texto_del_usuario}"
-```
-
-La respuesta se valida contra un JSON Schema antes de aplicarse; si no
-califica, la transacción simplemente queda `pendiente` para que el usuario la
-categorice a mano (nunca se bloquea la captura por un fallo del LLM).
-
 ### Aprendizaje por corrección
 
 Cuando el usuario cambia la categoría sugerida, la app inserta una fila en
@@ -100,42 +70,56 @@ de un restaurante frecuente) apuntando a la categoría elegida, con
 `family_id` de esa familia. La próxima vez, esa regla se evalúa **antes** que
 el diccionario del sistema.
 
-## 2. Parser de SMS bancarios (`parseBankSms`)
+## 2. Kipobot — captura conversacional con IA (`api/parse-expense.js`)
 
-### Limitación de plataforma (importante)
+Reemplaza la lectura de SMS bancarios (quitada por completo: sin permiso de
+Android, sin pantalla, sin tabla `sms_inbox`). En vez de leer una alerta del
+banco, la persona le cuenta el gasto a Kipobot en `mobile/app/(tabs)/chat.tsx`
+tal como lo diría en voz alta, y un modelo de IA lo interpreta.
 
-- **Android**: permite leer SMS en segundo plano con permisos en tiempo de
-  ejecución `READ_SMS` / `RECEIVE_SMS` y un listener nativo (módulo nativo o
-  librería tipo `react-native-android-sms-listener`). Kipo lo implementa así.
-- **iOS**: Apple **no permite** que apps de terceros lean SMS en segundo
-  plano — no existe una API pública para esto. La alternativa de baja
-  fricción es una **Share Extension**: el usuario, al recibir la notificación
-  bancaria, la comparte manualmente hacia Kipo (2 toques) y se procesa con el
-  mismo `parseBankSms`. Esto se debe comunicar claramente en el onboarding de
-  iOS para no prometer una función que la plataforma no permite.
+### Por qué IA y no solo el parser de reglas
 
-### Estrategia: patrones por banco + fallback genérico
+El parser de `expenseTextParser.mjs` (§1) sigue existiendo y es instantáneo,
+gratis y offline — pero es rígido: solo reconoce los patrones que ya
+conocemos. Un modelo de lenguaje entiende variaciones naturales que el
+diccionario no cubre, y — la diferencia real frente a antes — puede
+**preguntar lo que falte** ("¿fue en efectivo o con tarjeta?", "¿cuánto
+fue?") en vez de adivinar o dejar la transacción a medias.
 
-Los formatos de SMS varían por banco y país, así que `BANK_PATTERNS` es una
-lista extensible de reglas (regex con grupos nombrados) — se agregan nuevas
-sin tocar la lógica central. Incluye 3 patrones de ejemplo (compra aprobada,
-tarjeta debitada, retiro en cajero) que cubren los formatos más comunes en
-banca latinoamericana. Si ningún patrón calza, un **fallback genérico**
-extrae el monto y la primera secuencia en mayúsculas como posible comercio,
-marcado con `confidence: 'low'` para que el usuario lo confirme o corrija
-manualmente — y esa corrección puede promoverse a un nuevo patrón.
+### Arquitectura
 
-### Deduplicación
+`mobile/src/lib/aiExpense.ts` llama a `POST /api/parse-expense` (función
+serverless en Vercel, mismo proyecto que la landing — ver `vercel.json`).
+Nunca se llama a la API de Gemini directo desde la app: la key vive solo en
+la variable de entorno `GEMINI_API_KEY` de Vercel — si viviera en el
+cliente, cualquiera que descompile el APK podría extraerla y gastarla a
+nuestro nombre.
 
-`matchExistingTransaction` evita sugerir un SMS que corresponde a un gasto
-que el usuario ya registró por chat/voz: si existe una transacción con el
-mismo monto dentro de una ventana de ±2 horas, el SMS se vincula a esa
-transacción (`sms_inbox.matched_transaction_id`) en vez de crear una
-sugerencia duplicada.
+El endpoint usa `gemini-2.5-flash-lite` (el más barato entre los comparados
+— Gemini/DeepSeek/Grok/Kimi — a fracciones de centavo por gasto) con salida
+estructurada (`responseSchema`): el modelo elige la categoría de una lista
+cerrada que la app le manda en cada request (nunca inventa un `groupSlug`
+que no exista), y responde con `status: "ready"` (trae un draft completo) o
+`status: "needs_clarification"` (trae una sola pregunta corta).
 
-### Nunca se conecta a APIs bancarias
+### Conversación multi-turno
 
-Todo el procesamiento es sobre el **texto de la notificación** que el propio
-sistema operativo ya entregó a la app (con permiso explícito del usuario). No
-hay scraping, no hay credenciales bancarias, no hay Open Banking — por diseño,
-para minimizar superficie de riesgo y cumplimiento.
+Mientras Kipobot está a medio interpretar un gasto (te hizo una pregunta),
+`chat.tsx` acumula esos turnos y se los reenvía en el siguiente mensaje, para
+que el modelo tenga el contexto completo. Apenas el draft queda `ready` (o
+falla y cae al respaldo local), ese contexto se vacía — el siguiente mensaje
+empieza una interpretación nueva, no arrastra el gasto anterior.
+
+### Respaldo sin red (nunca deja a alguien sin poder registrar un gasto)
+
+Si `/api/parse-expense` no responde (sin conexión, `GEMINI_API_KEY` sin
+configurar, error de Gemini, timeout de 12s), `chat.tsx` cae automáticamente
+al parser local por reglas (§1) con el texto completo de la conversación
+hasta ese punto, y avisa en el chat que usó "modo rápido" para que la
+persona sepa que vale la pena revisar la categoría.
+
+### Nunca se conecta a APIs bancarias ni mueve dinero real
+
+Todo el procesamiento es sobre el texto que la propia persona escribe en el
+chat. No hay scraping, no hay credenciales bancarias, no hay Open Banking —
+por diseño, para minimizar superficie de riesgo y cumplimiento.

@@ -17,10 +17,11 @@ npm run web
 
 Esto abre Kipo en el navegador. Puedes:
 
-- Registrar tus propios gastos reales por chat — quedan guardados en el
-  almacenamiento local del navegador, no se pierden al recargar la página.
-- Simular alertas de SMS bancarias (pestaña **SMS**) para probar ese parser
-  sin depender de una build nativa de Android.
+- Registrar tus propios gastos reales hablando con Kipobot (chat con IA) —
+  quedan guardados en el almacenamiento local del navegador, no se pierden al
+  recargar la página. Sin `GEMINI_API_KEY` configurada, cae automáticamente
+  al parser local por reglas — sigue funcionando, solo sin las preguntas de
+  aclaración.
 - Corregir categorías sugeridas y ver cómo la app "aprende" la corrección.
 - Ver el dashboard, presupuestos y recordatorios reaccionar a esos datos.
 
@@ -35,10 +36,13 @@ donde de verdad vas a usarla.
 ### Publicar esta versión web en un link real (Vercel)
 
 El repo ya trae [`vercel.json`](../vercel.json) en la raíz configurado para
-este monorepo (la app vive en `mobile/`, no en la raíz). Al conectar el repo
-en [vercel.com](https://vercel.com/new), Vercel lee ese archivo solo y
-compila correctamente sin tocar nada más — el build corre
-`npx expo export -p web` dentro de `mobile/` y publica `mobile/dist`.
+este monorepo. Desde que existe la landing de marketing (`landing/`), el
+dominio raíz sirve esa landing estática y la app (Expo web export) vive bajo
+`/app/*` en el mismo dominio — el build corre `npx expo export -p web` dentro
+de `mobile/` con `EXPO_WEB_BASE_PATH=/app` y copia el resultado a
+`landing/public/app/` antes de publicar `landing/public` completo. Al
+conectar el repo en [vercel.com](https://vercel.com/new), Vercel lee ese
+archivo solo y compila correctamente sin tocar nada más.
 
 Si ya tenías un proyecto de Vercel conectado a este repo desde **antes** de
 que existiera `vercel.json` (por eso el 404 `NOT_FOUND` la primera vez: no
@@ -131,13 +135,13 @@ Checklist de lo que falta cuando el Nivel 2 ya se sienta bien:
       `docs/ARCHITECTURE.md`).
 - [ ] Edge Function `check-budgets` + `send-reminders` (cron diario) y
       Expo Push para las notificaciones — hoy son solo alertas dentro de la app.
-- [ ] Módulo nativo de lectura de SMS en Android (permisos `READ_SMS`/
-      `RECEIVE_SMS` ya declarados en `app.json`) — revisar la política de Play
-      Store para apps que piden ese permiso sin ser el manejador de SMS
-      por defecto (puede requerir justificación o el flujo alterno de
-      compartir manualmente, igual que en iOS).
-- [ ] Edge Function `parse-fallback` con Claude para los mensajes de baja
-      confianza (prompt ya documentado en `docs/NLP_PARSING.md`).
+- [x] ~~Módulo nativo de lectura de SMS en Android~~ — se quitó por completo
+      (permiso, pantalla y tabla `sms_inbox`); reemplazado por Kipobot, ver
+      `docs/NLP_PARSING.md` §2 y `api/parse-expense.js`.
+- [ ] Configurar `GEMINI_API_KEY` en las variables de entorno de Vercel para
+      que Kipobot (captura de gastos y el bot de la landing) funcione en
+      producción — sin ella, ambos caen a su respaldo (parser local / mensaje
+      de contacto).
 - [ ] Facturación (Stripe u otro) si vas a cobrar por espacio/familia — el
       aislamiento multi-cliente ya existe, falta la parte de cobro.
 - [ ] `eas build` firmado + revisión de permisos declarados antes de subir a

@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void;
   onSelect: (option: CategoryOption) => void;
   // 'gasto' por defecto — los usos existentes (presupuestos, corrección de
-  // categoría de un gasto, confirmar un cargo de SMS) son todos de gasto.
+  // categoría de un gasto) son todos de gasto.
   // ConfirmCaptureCard pasa 'ingreso' cuando la transacción es un ingreso.
   kind?: 'gasto' | 'ingreso';
 }

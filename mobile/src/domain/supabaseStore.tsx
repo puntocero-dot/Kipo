@@ -18,9 +18,9 @@ import { KipoContext, emptyKipoState, type KipoContextValue } from './kipoContex
 import { supabase } from '../lib/supabase';
 import { notify } from '../lib/confirm';
 import { colors, groupColors } from '../theme';
-import { parseBankSms, parseExpenseWithFamilyRules } from './parsing';
+import { parseExpenseWithFamilyRules } from './parsing';
 import { shiftByRecurrence } from './selectors';
-import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
+import type { Account, Budget, CategorizationRule, FamilyMember, KipoState, Reminder, SavingsGoal, Transaction, TransactionDraft } from './types';
 
 function dbTransactionToApp(row: any, cats: CategoryMaps): Transaction {
   const cat = row.category_id ? cats.idToSlug.get(row.category_id) : undefined;
@@ -96,20 +96,6 @@ function dbReminderToApp(row: any, cats: CategoryMaps): Reminder {
   };
 }
 
-function dbSmsToApp(row: any): SmsSuggestion {
-  return {
-    id: row.id,
-    rawSms: row.raw_sms,
-    parsedAmount: row.parsed_amount !== null ? Number(row.parsed_amount) : null,
-    parsedMerchant: row.parsed_merchant,
-    transactionType: row.parsed_transaction_type,
-    confidence: row.confidence,
-    status: row.status,
-    receivedAt: row.received_at,
-    matchedTransactionId: row.matched_transaction_id ?? undefined,
-  };
-}
-
 interface Props {
   familyId: string;
   membershipId: string;
@@ -125,13 +111,12 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     const cats = await fetchCategoryMaps(familyId);
     catMapsRef.current = cats;
 
-    const [familyRes, membersRes, txRes, budgetsRes, remindersRes, smsRes, rulesRes, accountsRes, goalsRes] = await Promise.all([
+    const [familyRes, membersRes, txRes, budgetsRes, remindersRes, rulesRes, accountsRes, goalsRes] = await Promise.all([
       supabase!.from('families').select('name, invite_code, base_currency, photo_url').eq('id', familyId).single(),
       supabase!.from('users').select('id, display_name, role, email, status, accent_color').eq('family_id', familyId),
       supabase!.from('transactions').select('*').eq('family_id', familyId).order('occurred_at', { ascending: false }),
       supabase!.from('budgets').select('*').eq('family_id', familyId),
       supabase!.from('reminders').select('*').eq('family_id', familyId),
-      supabase!.from('sms_inbox').select('*').eq('user_id', membershipId).order('received_at', { ascending: false }),
       supabase!.from('categorization_rules').select('id, keyword, category_id').eq('family_id', familyId),
       supabase!.from('accounts').select('*').eq('family_id', familyId),
       supabase!.from('savings_goals').select('*').eq('family_id', familyId),
@@ -148,7 +133,6 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     const transactions = (txRes.data ?? []).map((r: any) => dbTransactionToApp(r, cats));
     const budgets = (budgetsRes.data ?? []).map(dbBudgetToApp);
     const reminders = (remindersRes.data ?? []).map((r: any) => dbReminderToApp(r, cats));
-    const smsInbox = (smsRes.data ?? []).map(dbSmsToApp);
     const categorizationRules: CategorizationRule[] = (rulesRes.data ?? [])
       .map((r: any) => {
         const cat = r.category_id ? cats.idToSlug.get(r.category_id) : undefined;
@@ -167,7 +151,6 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       transactions,
       budgets,
       reminders,
-      smsInbox,
       categorizationRules,
       accounts,
       savingsGoals,
@@ -221,9 +204,11 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     };
   }, [familyId, scheduleReload]);
 
-  const addTransactionFromText = useCallback(
-    (text: string, userId: string = membershipId): Transaction => {
-      const draft = parseExpenseWithFamilyRules(text, state.categorizationRules);
+  // Guarda un draft ya interpretado — por el parser local (respaldo sin red)
+  // o por el bot con IA (src/lib/aiExpense.ts, misma forma de draft) — sin
+  // que este store necesite saber cuál de los dos lo produjo.
+  const addTransactionFromDraft = useCallback(
+    (draft: TransactionDraft, userId: string = membershipId): Transaction => {
       // El id se genera aquí (no lo asigna Postgres) para que sea el mismo
       // antes y después del insert — así una pantalla que guardó este id al
       // mostrar la tarjeta de confirmación (chat.tsx) lo sigue encontrando
@@ -281,7 +266,17 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
 
       return optimistic;
     },
-    [membershipId, familyId, state.categorizationRules, state.baseCurrency],
+    [membershipId, familyId, state.baseCurrency],
+  );
+
+  // Respaldo instantáneo y sin red — Kipobot (chat.tsx) recurre a esto si el
+  // bot con IA no responde.
+  const addTransactionFromText = useCallback(
+    (text: string, userId: string = membershipId): Transaction => {
+      const draft = parseExpenseWithFamilyRules(text, state.categorizationRules);
+      return addTransactionFromDraft(draft, userId);
+    },
+    [state.categorizationRules, addTransactionFromDraft],
   );
 
   const updateTransaction = useCallback(
@@ -419,133 +414,6 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
     },
     [state.transactions, familyId],
   );
-
-  const simulateIncomingSms = useCallback(
-    (rawSms: string): SmsSuggestion => {
-      const parsed = parseBankSms(rawSms);
-      const optimisticId = Crypto.randomUUID();
-      const suggestion: SmsSuggestion = {
-        id: optimisticId,
-        rawSms: parsed.raw_sms,
-        parsedAmount: parsed.amount,
-        parsedMerchant: parsed.merchant,
-        transactionType: parsed.transaction_type as SmsSuggestion['transactionType'],
-        confidence: parsed.confidence as SmsSuggestion['confidence'],
-        status: 'pendiente',
-        receivedAt: parsed.occurred_at,
-      };
-      setState((prev) => ({ ...prev, smsInbox: [suggestion, ...prev.smsInbox] }));
-
-      (async () => {
-        const { data, error } = await supabase!
-          .from('sms_inbox')
-          .insert({
-            id: optimisticId,
-            user_id: membershipId,
-            raw_sms: parsed.raw_sms,
-            bank_pattern_id: parsed.bank_pattern_id,
-            parsed_amount: parsed.amount,
-            parsed_merchant: parsed.merchant,
-            parsed_transaction_type: parsed.transaction_type,
-            confidence: parsed.confidence,
-            status: 'pendiente',
-          })
-          .select()
-          .single();
-        if (!error && data) {
-          setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.map((s) => (s.id === optimisticId ? dbSmsToApp(data) : s)) }));
-        } else if (error) {
-          setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.filter((s) => s.id !== optimisticId) }));
-          notify('No se pudo guardar el SMS', error.message);
-        }
-      })();
-
-      return suggestion;
-    },
-    [membershipId],
-  );
-
-  const confirmSms = useCallback(
-    (id: string, overrides: Partial<Transaction> = {}) => {
-      const sms = state.smsInbox.find((s) => s.id === id);
-      if (!sms) return;
-
-      const isIncome = sms.transactionType === 'deposito';
-      const transaction: Transaction = {
-        id: Crypto.randomUUID(),
-        userId: overrides.userId ?? membershipId,
-        type: overrides.type ?? (isIncome ? 'ingreso' : 'gasto'),
-        amount: overrides.amount ?? sms.parsedAmount ?? 0,
-        currency: state.baseCurrency,
-        groupSlug: overrides.groupSlug ?? null,
-        subSlug: overrides.subSlug ?? null,
-        merchant: overrides.merchant ?? sms.parsedMerchant,
-        description: overrides.description ?? sms.parsedMerchant ?? (isIncome ? 'Depósito bancario' : 'Compra con tarjeta'),
-        rawText: sms.rawSms,
-        source: 'sms',
-        status: 'confirmado',
-        occurredAt: overrides.occurredAt ?? sms.receivedAt,
-        accountId: overrides.accountId ?? null,
-        budgetId: overrides.budgetId ?? null,
-      };
-      setState((prev) => ({
-        ...prev,
-        transactions: [transaction, ...prev.transactions],
-        smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'confirmado' } : s)),
-      }));
-
-      (async () => {
-        const { data, error } = await supabase!
-          .from('transactions')
-          .insert({
-            id: transaction.id,
-            family_id: familyId,
-            user_id: transaction.userId,
-            account_id: transaction.accountId,
-            budget_id: transaction.budgetId,
-            type: transaction.type,
-            amount: transaction.amount,
-            currency: transaction.currency,
-            category_id: categoryIdFor(catMapsRef.current, transaction.groupSlug, transaction.subSlug),
-            merchant: transaction.merchant,
-            description: transaction.description,
-            raw_text: transaction.rawText,
-            source: 'sms',
-            status: 'confirmado',
-            occurred_at: transaction.occurredAt,
-          })
-          .select()
-          .single();
-
-        if (data) {
-          setState((prev) => ({ ...prev, transactions: prev.transactions.map((t) => (t.id === transaction.id ? dbTransactionToApp(data, catMapsRef.current) : t)) }));
-          await supabase!.from('sms_inbox').update({ status: 'confirmado', matched_transaction_id: data.id }).eq('id', id);
-        } else if (error) {
-          setState((prev) => ({
-            ...prev,
-            transactions: prev.transactions.filter((t) => t.id !== transaction.id),
-            smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'pendiente' } : s)),
-          }));
-          notify('No se pudo confirmar el SMS', error.message);
-        }
-      })();
-    },
-    [state.smsInbox, state.baseCurrency, membershipId, familyId],
-  );
-
-  const discardSms = useCallback((id: string) => {
-    setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'descartado' } : s)) }));
-    supabase!
-      .from('sms_inbox')
-      .update({ status: 'descartado' })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          setState((prev) => ({ ...prev, smsInbox: prev.smsInbox.map((s) => (s.id === id ? { ...s, status: 'pendiente' } : s)) }));
-          notify('No se pudo descartar el SMS', error.message);
-        }
-      });
-  }, []);
 
   const addBudget = useCallback(
     (budget: Omit<Budget, 'id'>) => {
@@ -1021,13 +889,11 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       currentUserId: membershipId,
       setCurrentUserId,
       addTransactionFromText,
+      addTransactionFromDraft,
       updateTransaction,
       confirmTransaction,
       deleteTransaction,
       correctCategory,
-      simulateIncomingSms,
-      confirmSms,
-      discardSms,
       addBudget,
       updateBudget,
       removeBudget,
@@ -1054,13 +920,11 @@ export function SupabaseKipoProvider({ familyId, membershipId, children }: Props
       membershipId,
       setCurrentUserId,
       addTransactionFromText,
+      addTransactionFromDraft,
       updateTransaction,
       confirmTransaction,
       deleteTransaction,
       correctCategory,
-      simulateIncomingSms,
-      confirmSms,
-      discardSms,
       addBudget,
       updateBudget,
       removeBudget,
