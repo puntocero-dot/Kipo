@@ -253,6 +253,7 @@ const styles = StyleSheet.create({
   removeLink: { color: colors.critical, fontFamily: fonts.bodyMedium, fontSize: 12 },
   input: {
     backgroundColor: colors.page,
+    color: colors.textPrimary,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 11,

@@ -314,6 +314,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     backgroundColor: colors.page,
+    color: colors.textPrimary,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,

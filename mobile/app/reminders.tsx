@@ -254,6 +254,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#fff', fontFamily: fonts.bodyBold },
   input: {
     backgroundColor: colors.page,
+    color: colors.textPrimary,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 11,

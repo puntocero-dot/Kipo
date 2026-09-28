@@ -4,11 +4,16 @@
 // interpreta con IA, preguntando lo que falte en vez de adivinar.
 //
 // EXPO_PUBLIC_* se embebe en el bundle (público, no es un secreto — igual
-// que EXPO_PUBLIC_SUPABASE_URL en lib/supabase.ts) y por default apunta al
-// dominio de producción de la landing, donde vive /api/parse-expense junto
-// al resto del sitio (ver vercel.json). Solo hace falta cambiar la env var
-// si el backend se sirve desde otro dominio.
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://kipoapp.com';
+// que EXPO_PUBLIC_SUPABASE_URL en lib/supabase.ts). Por default queda
+// vacío para que el fetch sea relativo (mismo origen que sirvió la página)
+// — /api/parse-expense vive junto al resto del sitio en el mismo dominio
+// (ver vercel.json), sea cual sea ese dominio (kipoapp.com, el subdominio
+// *.vercel.app mientras no se conecte el dominio final, un preview de PR,
+// etc.). Un dominio absoluto hardcodeado aquí rompe el CSP connect-src
+// 'self' de vercel.json en cuanto la página no se sirve exactamente desde
+// ese dominio. Solo hace falta la env var si el backend algún día se sirve
+// desde un dominio distinto al de la app.
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || '';
 
 const REQUEST_TIMEOUT_MS = 12_000;
 

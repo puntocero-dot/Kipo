@@ -268,6 +268,7 @@ const styles = StyleSheet.create({
   statusButtonTextReactivate: { color: colors.primary },
   input: {
     backgroundColor: colors.page,
+    color: colors.textPrimary,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 11,
