@@ -71,32 +71,22 @@ de qué corre contra Postgres y qué sigue siendo local.
    (plan Free alcanza de sobra para pruebas). Guarda la URL del proyecto y la
    `anon key` (Project Settings → API).
 
-2. **Aplica las migraciones.** Con el [Supabase CLI](https://supabase.com/docs/guides/cli)
-   ya logueado y enlazado a tu proyecto (`supabase login`, `supabase init`,
-   `supabase link --project-ref <tu-project-ref>`):
+2. **Aplica las migraciones.** No usamos el Supabase CLI para esto — pega
+   cada archivo de `supabase/migrations/`, **en orden numérico** (`0001_...`
+   hasta el más reciente), en el **SQL Editor** del panel de Supabase.
+   `database/schema.sql` es la foto acumulada de todas las migraciones
+   aplicadas hasta hoy, útil como referencia rápida del esquema completo sin
+   tener que sumar cada archivo mentalmente.
 
-   ```bash
-   supabase db push
-   ```
-
-   Esto aplica, en orden, los 4 archivos de `supabase/migrations/`:
-   `0001_init.sql` (esquema base), `0002_category_seed.sql` (categorías del
-   sistema), `0003_multi_workspace_and_rls.sql` (una persona puede tener más
-   de un espacio + RLS que antes faltaba en `families`/`users`/etc.) y
-   `0004_budget_category_kind.sql` (un presupuesto cubre un grupo completo de
-   categorías, no una sola). Si prefieres no instalar el CLI, puedes pegar
-   cada archivo, en ese mismo orden, en el **SQL Editor** del panel de
-   Supabase — es el mismo SQL.
-
-3. **(Opcional) Carga la familia de prueba "Familia Pérez".** `supabase db push`
-   no corre `supabase/seed.sql` contra un proyecto remoto (ese archivo es para
-   `supabase db reset` en local). Para poblar tu staging con la misma data de
+3. **(Opcional) Carga la familia de prueba "Familia Pérez".** Pegar las
+   migraciones en el SQL Editor no incluye `supabase/seed.sql` (ese archivo
+   es aparte, pensado para `supabase db reset` en local o para correrlo a
+   mano contra staging). Para poblar tu staging con la misma data de
    ejemplo:
 
-   ```bash
-   psql "$(npx supabase status -o env | grep DB_URL)" -f supabase/seed.sql
-   # o, más simple: pega supabase/seed.sql en el SQL Editor de Supabase
-   ```
+   Pega el contenido de `supabase/seed.sql` en el SQL Editor de Supabase y
+   ejecútalo (o, si tienes el Supabase CLI enlazado al proyecto:
+   `psql "$(npx supabase status -o env | grep DB_URL)" -f supabase/seed.sql`).
 
    Como esos usuarios de prueba no tienen `auth_user_id` (no son cuentas
    reales), no vas a poder "iniciar sesión como ellos" — son solo para

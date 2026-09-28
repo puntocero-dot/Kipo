@@ -1,11 +1,18 @@
 import * as ImagePicker from 'expo-image-picker';
+import { notify } from './confirm';
 import { supabase } from './supabase';
+
+// Debe coincidir con el file_size_limit de los buckets `branding`/
+// `family-photos` (supabase/migrations/0023_bucket_upload_limits.sql) — el
+// chequeo aquí es solo para dar un mensaje claro; el límite real que importa
+// es el del bucket en Supabase Storage.
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 // Abre el picker nativo/web, sube la imagen elegida a un bucket público de
 // Storage en una ruta fija (upsert=true así siempre pisa la anterior) y
 // devuelve la URL pública lista para guardar — usado por la foto de familia
 // (family.tsx) y el fondo del login (branding.tsx). Devuelve null si el
-// usuario canceló o si algo falló.
+// usuario canceló, si el archivo excede el límite, o si algo falló.
 export async function pickAndUploadImage(bucket: string, path: string): Promise<string | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) return null;
@@ -19,6 +26,11 @@ export async function pickAndUploadImage(bucket: string, path: string): Promise<
   const asset = result.assets[0];
   const response = await fetch(asset.uri);
   const blob = await response.blob();
+
+  if (blob.size > MAX_UPLOAD_BYTES) {
+    notify('Archivo demasiado grande', 'El máximo es 5 MB.');
+    return null;
+  }
 
   const { error } = await supabase!.storage.from(bucket).upload(path, blob, {
     upsert: true,
