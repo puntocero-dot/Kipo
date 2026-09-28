@@ -15,14 +15,12 @@ erDiagram
     families ||--o{ reminders : "define"
     users ||--o{ devices : "usa"
     users ||--o{ transactions : "registra"
-    users ||--o{ sms_inbox : "recibe"
     accounts ||--o{ transactions : "origina"
     categories ||--o{ categories : "subcategoría de"
     categories ||--o{ transactions : "clasifica"
     categories ||--o{ categorization_rules : "asociada a"
     categories ||--o{ budgets : "limita"
     categories ||--o{ reminders : "clasifica"
-    sms_inbox }o--|| transactions : "confirma en"
     budgets ||--o{ budget_alerts_log : "registra"
 ```
 
@@ -32,8 +30,8 @@ erDiagram
 Una familia agrupa a sus miembros (`users`). `role` distingue `admin` (puede
 editar presupuestos/categorías) de `member` y `child` (perfiles sin login,
 útiles si algún día se quiere que un adolescente registre sus propios gastos).
-`devices` guarda el token de push y si ese dispositivo tiene activado el
-lector de SMS (`sms_reader_enabled`, solo relevante en Android).
+`devices` guarda el token de push de ese dispositivo (para notificaciones,
+ej. recordatorios de pago).
 
 ### `categories` + `categorization_rules`
 Jerarquía de 2 niveles (grupo `kind` → subcategoría), sembrada desde
@@ -53,19 +51,20 @@ Los 5 grupos (`kind`) mapean 1:1 con el pedido original:
 | `salidas_convivencia` | En Familia, En Pareja, Personales/Amigos |
 
 ### `transactions`
-Tabla central. `source` distingue cómo se originó (`chat`, `voz`, `sms`,
-`manual`, `recurrente`) y `status` si ya fue confirmada por el usuario o sigue
-`pendiente` de revisión (típico de una sugerencia de SMS o de un parseo de
-baja confianza). `raw_text` conserva el mensaje original — útil para auditar
-al parser y para reentrenar el diccionario de categorías. `metadata` (jsonb)
-guarda detalles como el `confidence` del parser o el `sms_inbox_id` de origen.
+Tabla central. `source` distingue cómo se originó (`chat`, `voz`, `manual`,
+`recurrente` — `sms` se mantiene como valor histórico válido, pero ninguna
+pantalla actual crea filas con ese origen, ver más abajo) y `status` si ya fue
+confirmada por el usuario o sigue `pendiente` de revisión (típico de un
+parseo de baja confianza, del parser local o de Kipobot). `raw_text` conserva
+el mensaje original — útil para auditar al parser y para reentrenar el
+diccionario de categorías. `metadata` (jsonb) guarda detalles como el
+`confidence` del parser/bot con IA.
 
-### `sms_inbox`
-Cola de sugerencias detectadas por el listener de SMS (Android). Nunca escribe
-directo a `transactions`: el usuario confirma o descarta desde una bandeja
-dedicada, y solo entonces se crea/vincula la fila en `transactions`
-(`matched_transaction_id` evita duplicados cuando el usuario ya había
-registrado el mismo gasto manualmente).
+> La bandeja de SMS bancarios (tabla `sms_inbox`, permiso de Android
+> `READ_SMS`/`RECEIVE_SMS`, pantalla dedicada) se quitó por completo — ver
+> `supabase/migrations/0020_remove_sms_inbox.sql`. Se reemplazó por Kipobot,
+> captura de gastos por chat interpretada con IA (ver
+> [`NLP_PARSING.md`](./NLP_PARSING.md) §2).
 
 ### `budgets` + `budget_alerts_log`
 Un presupuesto puede ser general (`category_kind = null`, suma todos los
@@ -89,7 +88,6 @@ se encola aquí antes de subir a Postgres, y el `client_id` permite resolver
 conflictos por "last-write-wins" comparando `updated_at`.
 
 ### Row Level Security (RLS)
-`transactions`, `budgets`, `reminders` y `sms_inbox` tienen políticas que
-limitan cada fila a la familia (o usuario, en el caso de `sms_inbox`) del
-`auth.uid()` autenticado — así ninguna familia puede ver datos de otra aunque
-compartan la misma base de datos Supabase.
+`transactions`, `budgets` y `reminders` tienen políticas que limitan cada fila
+a la familia del `auth.uid()` autenticado — así ninguna familia puede ver
+datos de otra aunque compartan la misma base de datos Supabase.

@@ -77,7 +77,7 @@ export default function DashboardScreen() {
 
   return (
     <TabScreenGuard>
-      <Screen>
+      <Screen fabClearance={72}>
         <View>
           <Text style={styles.greeting}>{state.familyName}</Text>
           <Text style={styles.monthLabel}>Balance de {MONTH_NAMES[selectedDate.getMonth()]}</Text>

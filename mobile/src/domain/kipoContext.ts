@@ -6,21 +6,26 @@
 // si hay un proyecto de Supabase configurado.
 import { createContext, useContext } from 'react';
 import type { CategoryOption } from './categories';
-import type { Account, Budget, FamilyMember, KipoState, Reminder, SavingsGoal, SmsSuggestion, Transaction } from './types';
+import type { Account, Budget, FamilyMember, KipoState, Reminder, SavingsGoal, Transaction, TransactionDraft } from './types';
 
 export interface KipoContextValue {
   state: KipoState;
   loading: boolean;
   currentUserId: string;
   setCurrentUserId: (id: string) => void;
+  // Ruta local/instantánea (parser por reglas, sin red) — Kipobot (chat.tsx)
+  // la usa como respaldo automático cuando el bot con IA no responde, y
+  // sigue siendo el único camino en el ambiente de pruebas 100% local.
   addTransactionFromText: (text: string, userId?: string) => Transaction;
+  // Ruta que alimenta el bot con IA (src/lib/aiExpense.ts): recibe el draft
+  // ya interpretado por Gemini (o por el parser local, misma forma) y solo
+  // se encarga de guardarlo — así ninguno de los dos stores necesita saber
+  // de dónde vino el draft.
+  addTransactionFromDraft: (draft: TransactionDraft, userId?: string) => Transaction;
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
   confirmTransaction: (id: string, patch?: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   correctCategory: (id: string, groupSlug: string, subSlug: string) => void;
-  simulateIncomingSms: (rawSms: string) => SmsSuggestion;
-  confirmSms: (id: string, overrides?: Partial<Transaction>) => void;
-  discardSms: (id: string) => void;
   addBudget: (budget: Omit<Budget, 'id'>) => void;
   updateBudget: (id: string, patch: Partial<Omit<Budget, 'id'>>) => void;
   removeBudget: (id: string) => void;
@@ -76,7 +81,6 @@ export function emptyKipoState(): KipoState {
     transactions: [],
     budgets: [],
     reminders: [],
-    smsInbox: [],
     categorizationRules: [],
     accounts: [],
     savingsGoals: [],

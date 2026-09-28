@@ -40,6 +40,8 @@ export function TermsModal({ visible, onClose }: Props) {
             No vendemos tus datos financieros a terceros. La información se usa únicamente para operar la app
             (mostrarte tu historial, calcular tus resúmenes, enviarte recordatorios) y se protege con controles de
             acceso a nivel de base de datos, de modo que solo tú y los miembros de tu espacio de trabajo pueden verla.
+            Cuando le cuentas un gasto a Kipobot, ese texto se envía a Google Gemini únicamente para interpretar el
+            monto y la categoría.
           </Text>
           <Text style={styles.sectionTitle}>Uso aceptable</Text>
           <Text style={styles.body}>

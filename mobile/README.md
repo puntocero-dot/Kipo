@@ -1,9 +1,8 @@
 # Kipo — app (Expo / React Native)
 
-Implementación funcional del diseño en `../docs/`: captura de gastos en
-lenguaje natural, bandeja de SMS simulados, dashboard, presupuestos y
-recordatorios. Corre en dos modos, según si `.env` tiene un proyecto de
-Supabase configurado:
+Implementación funcional del diseño en `../docs/`: captura de gastos por chat
+con Kipobot (IA), dashboard, presupuestos y recordatorios. Corre en dos
+modos, según si `.env` tiene un proyecto de Supabase configurado:
 
 - **Sin `.env`** (por defecto): 100% local, sin backend, con datos de prueba
   realistas — el "Nivel 1" de `../docs/TESTING_ENVIRONMENT.md`.
@@ -22,8 +21,8 @@ npm start         # muestra un QR: escanéalo con la app Expo Go en tu celular
 ```
 
 La primera vez que abre, la app se siembra sola con datos de ejemplo de
-"Familia Pérez" (dos meses de gastos, presupuestos, recordatorios y 2 SMS
-pendientes) guardados en el almacenamiento local del navegador/dispositivo.
+"Familia Pérez" (dos meses de gastos, presupuestos y recordatorios) guardados
+en el almacenamiento local del navegador/dispositivo.
 Todo lo que registres además de eso (tus propios gastos reales) también
 queda guardado ahí — es data real tuya, solo que vive en este dispositivo
 hasta que conectes el backend de staging.
@@ -57,7 +56,7 @@ espacio**.
 | Aprendizaje por corrección de categoría | **Real** — genera reglas por familia |
 | Login, múltiples familias/clientes, múltiples espacios por persona | **Real** (en modo remoto) — Supabase Auth + RLS, ver `src/domain/authStore.tsx` |
 | Sincronización entre miembros de la familia | **Real** (en modo remoto) — Supabase Realtime; sin cola offline todavía (sin red, una escritura simplemente falla) |
-| Lectura de SMS bancarios en segundo plano | **Simulado** — solo funciona en una build nativa de Android; aquí hay un botón para "inyectar" un SMS de prueba y ver el mismo parser en acción |
+| Kipobot (captura de gastos con IA, pregunta lo que falte) | **Real** — llama a `/api/parse-expense` (Vercel + Gemini); sin `GEMINI_API_KEY` configurada o sin red, cae automáticamente al parser local (fila de arriba) |
 | Dictado por voz | **Pendiente** — requiere `expo-speech-recognition` en una build nativa, no wireado todavía |
 | Notificaciones push de recordatorios/presupuestos | **Pendiente** — hoy se muestran como alertas dentro de la app (dashboard); Expo Push + Edge Function es el siguiente paso de producción |
 
@@ -83,8 +82,7 @@ npx eas build:configure
 npx eas build --platform android   # o ios
 ```
 
-Antes de una build de producción real: revisar los permisos `READ_SMS`/
-`RECEIVE_SMS` declarados en `app.json` — Google Play restringe estos permisos
-a apps que sean el manejador de SMS por defecto, así que probablemente haga
-falta justificar el uso ante Play Store o usar un flujo alterno (compartir el
-SMS manualmente, igual que en iOS). Ver `../docs/NLP_PARSING.md`.
+Antes de una build de producción real: configurar `GEMINI_API_KEY` en las
+variables de entorno de Vercel para que Kipobot funcione (ver
+`../docs/NLP_PARSING.md` §2) — sin ella, la app sigue funcionando con el
+parser local como único motor, solo sin las preguntas de aclaración.

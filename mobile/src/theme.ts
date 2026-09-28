@@ -70,6 +70,21 @@ export const fonts = {
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 export const radius = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 };
 
+// Glassmorphism — el fondo plano de página pasa a un degradado sutil (mismo
+// verde bosque, apenas dos tonos de diferencia) para que las tarjetas
+// translúcidas de arriba tengan algo de profundidad detrás que "esmerilar";
+// sobre un fondo 100% plano, un panel translúcido se ve idéntico a uno
+// opaco. glassBg/glassBorder/glassHighlight replican el tratamiento que ya
+// tenía la tarjeta de login (BlurView + overlay translúcido + borde claro
+// fino) para reusarlo en Card, la tab bar y los modales.
+export const pageGradient: [string, string] = [colors.page, '#0A2019'];
+export const glass = {
+  bg: 'rgba(21,58,48,0.55)',
+  border: 'rgba(244,239,228,0.10)',
+  highlight: 'rgba(255,255,255,0.06)',
+  tabBarBg: 'rgba(13,38,32,0.78)',
+};
+
 // Tres niveles de elevación — una tarjeta normal, una tarjeta destacada
 // (balance del mes) y un elemento flotante (FAB, hoja modal).
 export const shadow = {

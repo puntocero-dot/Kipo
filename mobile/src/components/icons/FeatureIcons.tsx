@@ -29,28 +29,6 @@ export function VoiceCaptureIcon({ size = 22, color }: IconProps) {
   );
 }
 
-// "Lectura segura de SMS bancarios" — escudo con un brote (misma idea de
-// "crecer con cuidado" que la planta de SeedGrowthIntro) adentro.
-export function BankShieldIcon({ size = 22, color }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 3.5 5 6v5.2c0 4.3 2.9 7.6 7 9.3 4.1-1.7 7-5 7-9.3V6l-7-2.5Z"
-        stroke={color}
-        strokeWidth={1.7}
-        strokeLinejoin="round"
-      />
-      <Path d="M12 16v-5.4" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
-      <Path
-        d="M12 10.6c-2-.3-3-1.6-3.1-3 1.5-.2 2.8.5 3.1 1.9.3-1.4 1.6-2.1 3.1-1.9-.1 1.4-1.1 2.7-3.1 3Z"
-        stroke={color}
-        strokeWidth={1.4}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
 // "Seguimiento familiar de gastos" — dos personas + una flecha ascendente.
 export function FamilyTrackingIcon({ size = 22, color }: IconProps) {
   return (

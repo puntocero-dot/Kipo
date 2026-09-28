@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Kipo — Finanzas familiares fáciles de cuidar</title>
+  <meta name="description" content="Kipo es la app para llevar las finanzas de tu familia hablando con Kipobot, tu asistente con IA. Presupuestos por categoría y ahorro en familia. Disponible para Android en toda América." />
+  <link rel="canonical" href="https://kipoapp.com/" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph / redes sociales -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Kipo" />
+  <meta property="og:title" content="Kipo — Finanzas familiares fáciles de cuidar" />
+  <meta property="og:description" content="Registra gastos hablando con Kipobot como si le contaras a alguien de confianza. Presupuestos por categoría y ahorro en familia." />
+  <meta property="og:url" content="https://kipoapp.com/" />
+  <meta property="og:image" content="https://kipoapp.com/og-image.png" />
+  <meta property="og:locale" content="es_LA" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kipo — Finanzas familiares fáciles de cuidar" />
+  <meta name="twitter:description" content="La app para registrar gastos, controlar presupuestos y ahorrar en familia — disponible en toda América." />
+
+  <link rel="icon" href="/favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Datos estructurados para buscadores tradicionales Y motores de IA
+       (ChatGPT, Perplexity, Gemini, Copilot, AI Overviews de Google) — esto
+       es lo que les permite citar/recomendar Kipo con datos correctos en vez
+       de adivinar. Ver también /llms.txt. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "MobileApplication",
+    "name": "Kipo",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Android",
+    "description": "Kipo es una app de finanzas familiares para América Latina y Estados Unidos: registra gastos hablando con Kipobot (chat con IA) por texto o voz, organiza presupuestos por categoría y permite ahorrar en familia.",
+    "url": "https://kipoapp.com/",
+    "inLanguage": "es",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
+    "areaServed": {
+      "@type": "Continent",
+      "name": "Americas"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Punto Cero",
+      "url": "https://kipoapp.com/"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "¿Qué es Kipo?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kipo es una app para llevar las finanzas de tu familia. Registras un gasto escribiendo o hablando de forma natural (por ejemplo 'Cervezas con amigos $20'), y Kipo detecta el monto, la categoría y el contexto automáticamente. También organiza presupuestos, metas de ahorro y recordatorios de pagos fijos, compartidos entre los miembros de tu familia." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Kipo es gratis?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí, durante el lanzamiento Kipo es completamente gratis para descargar y usar, incluyendo registro de gastos, presupuestos y varios miembros de familia. Más adelante habrá un plan familiar de pago con funciones adicionales, siempre opcional." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Mis datos financieros están seguros en Kipo?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Kipo no vende ni comparte tus datos financieros con terceros. Cada familia tiene sus datos aislados con reglas de seguridad a nivel de base de datos (row level security), y solo los miembros que tú invitas con tu código de familia pueden ver esa información." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿En qué países funciona Kipo?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kipo está pensado para toda América: funciona en cualquier país de Latinoamérica, Estados Unidos y Canadá, en dólares o en la moneda local que elija cada familia." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Cómo sabe Kipo en qué categoría va cada gasto?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Se lo cuentas a Kipobot, el asistente de la app, como si le hablaras a una persona (por ejemplo 'Cervezas con amigos $20'). Kipobot detecta el monto y la categoría automáticamente, y si le falta un dato te hace una pregunta corta antes de adivinar." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Puedo usar Kipo con mi pareja, hijos o familia?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí, Kipo está diseñado para familias. Compartes un código de invitación y cada miembro registra sus propios gastos desde su cuenta, mientras todos ven el mismo presupuesto y balance familiar." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Cómo descargo Kipo?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Kipo está disponible para Android en Google Play. Busca 'Kipo' en la Play Store o usa el botón de descarga en kipoapp.com." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Kipo tiene versión para iPhone?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Por ahora Kipo está disponible solo para Android. La versión para iOS está en el mapa de desarrollo." }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="#top" class="brand" aria-label="Kipo — inicio">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 21v-8.5" stroke="#1f8f5b" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M12 15c-2.6-.4-4-2.1-4.2-4.3 2-.3 3.7.7 4.2 2.5.5-1.8 2.2-2.8 4.2-2.5-.2 2.2-1.6 3.9-4.2 4.3Z" stroke="#1f8f5b" stroke-width="1.5" stroke-linejoin="round"/>
+          <circle cx="12" cy="6.4" r="1.3" fill="#b9832a"/>
+        </svg>
+        Kipo
+      </a>
+      <nav class="main-nav">
+        <a class="nav-link" href="#como-funciona">Cómo funciona</a>
+        <a class="nav-link" href="#precios">Precios</a>
+        <a class="nav-link" href="#preguntas">Preguntas frecuentes</a>
+        <a href="#descargar" class="btn btn-primary nav-cta">Descargar gratis</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container">
+        <div>
+          <span class="eyebrow">Nuevo · disponible para Android en toda América</span>
+          <h1>Las finanzas de tu familia, tan fáciles de cuidar como un jardín</h1>
+          <p class="lead">Registra un gasto como si le escribieras a alguien de confianza. Kipo detecta el monto y la categoría, organiza el presupuesto familiar y te avisa antes de que un pago se te pase.</p>
+          <div class="hero-ctas" id="descargar">
+            <a class="store-badge" href="#" aria-disabled="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 3.5 15 12 4 20.5V3.5Z" fill="#fff"/><path d="M15 12l3.5-2 2.8 1.6c1 .6 1 1.9 0 2.5L18.5 15.7 15 12Z" fill="#fff" opacity="0.7"/></svg>
+              <span>Disponible pronto en<br><strong>Google Play</strong></span>
+            </a>
+            <a class="btn btn-ghost" href="#como-funciona">Ver cómo funciona</a>
+          </div>
+          <p class="trust-line">Gratis durante el lanzamiento · sin tarjeta de crédito · tus datos nunca se venden</p>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="balance-card">
+            <div class="balance-row">
+              <div><span>Ingresos</span><strong>$2,900</strong></div>
+              <div><span>Gastos</span><strong>$2,204</strong></div>
+              <div><span>Balance</span><strong>$696</strong></div>
+            </div>
+            <div class="track"><span></span></div>
+            <p class="caption" style="margin:0;color:rgba(255,255,255,.85)">76% de tus ingresos ya se gastó este mes</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="como-funciona">
+      <div class="container">
+        <div class="section-head">
+          <h2>Cómo funciona</h2>
+          <p>Sin hojas de cálculo, sin categorías complicadas — solo cuéntale a Kipo lo que gastaste.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <h3>Cuéntale tu gasto</h3>
+            <p>Escribe "Cervezas con amigos $20" o dilo en voz alta. Kipo entiende el monto, la categoría y hasta el contexto social, solo.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <h3>Kipo organiza todo</h3>
+            <p>Cada gasto se acomoda en la categoría correcta y se compara contra tus presupuestos del mes, en el momento.</p>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <h3>Toda la familia, un mismo lugar</h3>
+            <p>Invita a tu pareja o a quien cuide contigo las finanzas — cada quien registra desde su cuenta, todos ven el mismo balance.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>Todo lo que necesitas para cuidar tu dinero</h2>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2 2 0 0 1 6 3.5h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-6.5L8 17.5v-3H6a2 2 0 0 1-2-2v-7Z" stroke="#1f8f5b" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>Registro por chat o voz</h3>
+            <p>Anota un gasto en segundos, con tus propias palabras, sin formularios largos.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M8 10h8M8 14h5" stroke="#1f8f5b" stroke-width="1.7" stroke-linecap="round"/><path d="M4 5.5A2 2 0 0 1 6 3.5h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 3.5v-3.5H6a2 2 0 0 1-2-2v-9Z" stroke="#1f8f5b" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>Kipobot pregunta lo que falta</h3>
+            <p>Si el mensaje no trae todos los datos, Kipobot te hace una pregunta corta en vez de adivinar.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#1f8f5b" stroke-width="1.7"/><path d="M12 4v8l5 3" stroke="#1f8f5b" stroke-width="1.7" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Presupuestos con alertas</h3>
+            <p>Ponle un límite mensual a cada categoría y recibe un aviso antes de pasarte.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 18v-1.4a3.7 3.7 0 0 1 3.7-3.7h1a3.7 3.7 0 0 1 3.4 2.2" stroke="#1f8f5b" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="7.3" r="2.1" stroke="#1f8f5b" stroke-width="1.6"/></svg>
+            </div>
+            <h3>Metas de ahorro y familia</h3>
+            <p>Ahorra para lo que viene y comparte el progreso con quien cuide las finanzas contigo.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="precios">
+      <div class="container">
+        <div class="section-head">
+          <h2>Precios simples, pensados para familias</h2>
+          <p>Kipo es gratis durante el lanzamiento. Así se verán los planes cuando el plan familiar esté disponible.</p>
+        </div>
+        <div class="pricing-grid">
+          <div class="price-card">
+            <h3>Gratis</h3>
+            <p class="price">$0<span> /mes</span></p>
+            <p>Para empezar a ordenar tus finanzas hoy mismo.</p>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Registro de gastos por chat ilimitado</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Presupuestos por categoría</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>1 familia, miembros ilimitados</li>
+            </ul>
+          </div>
+          <div class="price-card featured">
+            <span class="badge">Próximamente</span>
+            <h3>Familia</h3>
+            <p class="price">$3.99<span> /mes</span></p>
+            <p>Todo lo del plan gratis, más funciones para familias que quieren ir más a fondo.</p>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Historial y reportes exportables</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Metas de ahorro ilimitadas</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Soporte prioritario</li>
+            </ul>
+          </div>
+        </div>
+        <p class="price-note">Precio de lanzamiento sujeto a cambios. Te avisamos por la app antes de activar cualquier cobro.</p>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="preguntas">
+      <div class="container">
+        <div class="section-head">
+          <h2>Preguntas frecuentes</h2>
+        </div>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>¿Qué es Kipo?</summary>
+            <p class="faq-answer">Kipo es una app para llevar las finanzas de tu familia. Registras un gasto escribiendo o hablando de forma natural (por ejemplo "Cervezas con amigos $20"), y Kipo detecta el monto, la categoría y el contexto automáticamente.</p>
+          </details>
+          <details class="faq-item">
+            <summary>¿Kipo es gratis?</summary>
+            <p class="faq-answer">Sí, durante el lanzamiento Kipo es completamente gratis, incluyendo registro de gastos, presupuestos y varios miembros de familia.</p>
+          </details>
+          <details class="faq-item">
+            <summary>¿Mis datos financieros están seguros?</summary>
+            <p class="faq-answer">Sí. Kipo no vende ni comparte tus datos con terceros. Cada familia tiene sus datos aislados, y solo los miembros que tú invitas pueden verlos.</p>
+          </details>
+          <details class="faq-item">
+            <summary>¿En qué países funciona Kipo?</summary>
+            <p class="faq-answer">Kipo está pensado para toda América: Latinoamérica, Estados Unidos y Canadá, en la moneda que elija cada familia.</p>
+          </details>
+          <details class="faq-item">
+            <summary>¿Cómo sabe Kipo en qué categoría va cada gasto?</summary>
+            <p class="faq-answer">Se lo cuentas a Kipobot como le hablarías a una persona. Detecta el monto y la categoría solo, y si le falta un dato te pregunta antes de adivinar.</p>
+          </details>
+          <details class="faq-item">
+            <summary>¿Cómo descargo Kipo?</summary>
+            <p class="faq-answer">Kipo estará disponible para Android en Google Play. Usa el botón de descarga de esta página en cuanto esté publicada.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="final-cta">
+          <h2>Empieza a cuidar las finanzas de tu familia hoy</h2>
+          <p>Kipo es gratis durante el lanzamiento. Descárgala en cuanto esté disponible en Google Play.</p>
+          <div class="hero-ctas" style="justify-content:center;margin-top:24px">
+            <a class="btn btn-primary" href="#descargar">Avísenme cuando esté disponible</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span class="footer-note">© 2026 Kipo, un producto de Punto Cero. Todos los derechos reservados.</span>
+      <div class="footer-links">
+        <a href="/privacidad.html">Privacidad</a>
+        <a href="/terminos.html">Términos</a>
+        <a href="mailto:hola@kipoapp.com">Contacto</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Kipobot: widget de chat restringido a temas de Kipo -->
+  <button id="kipobot-launcher" aria-haspopup="dialog" aria-controls="kipobot-panel">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21v-8.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M12 15c-2.6-.4-4-2.1-4.2-4.3 2-.3 3.7.7 4.2 2.5.5-1.8 2.2-2.8 4.2-2.5-.2 2.2-1.6 3.9-4.2 4.3Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    Pregúntale a Kipo
+  </button>
+  <div id="kipobot-panel" role="dialog" aria-label="Chat con Kipo" aria-modal="false">
+    <div class="kipobot-head">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21v-8.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M12 15c-2.6-.4-4-2.1-4.2-4.3 2-.3 3.7.7 4.2 2.5.5-1.8 2.2-2.8 4.2-2.5-.2 2.2-1.6 3.9-4.2 4.3Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <div><strong>Kipo</strong><span>Responde dudas sobre la app</span></div>
+      <button class="kipobot-close" id="kipobot-close" aria-label="Cerrar chat">✕</button>
+    </div>
+    <div class="kipobot-messages" id="kipobot-messages">
+      <div class="kipobot-msg bot">¡Hola! Soy el asistente de Kipo 🌱 Puedo contarte cómo funciona la app, sus precios o cómo descargarla. ¿Qué quieres saber?</div>
+    </div>
+    <div class="kipobot-suggestions" id="kipobot-suggestions">
+      <button class="kipobot-suggestion" type="button">¿Qué es Kipo?</button>
+      <button class="kipobot-suggestion" type="button">¿Cuánto cuesta?</button>
+      <button class="kipobot-suggestion" type="button">¿Cómo la descargo?</button>
+    </div>
+    <form class="kipobot-form" id="kipobot-form">
+      <label class="visually-hidden" for="kipobot-input">Escribe tu pregunta</label>
+      <input id="kipobot-input" type="text" placeholder="Escribe tu pregunta..." maxlength="300" autocomplete="off" />
+      <button type="submit" aria-label="Enviar">➤</button>
+    </form>
+    <p class="kipobot-disclaimer">Asistente automático de Kipo — solo responde temas de la app.</p>
+  </div>
+
+  <script src="/kipobot.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# Kipo — abierto a buscadores tradicionales y a los crawlers de los
+# principales motores de IA a propósito: el objetivo de esta landing es
+# justamente que ChatGPT, Perplexity, Gemini, Copilot y Google AI Overviews
+# puedan leer y recomendar Kipo con datos correctos (ver también /llms.txt).
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+Sitemap: https://kipoapp.com/sitemap.xml

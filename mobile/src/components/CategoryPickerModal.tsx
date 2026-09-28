@@ -1,8 +1,9 @@
+import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Dimensions, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CATEGORY_OPTIONS, GROUP_LABELS, GROUP_ORDER, type CategoryOption } from '../domain/categories';
 import { useKipo } from '../domain/store';
-import { colors, fonts, radius, shadow, spacing } from '../theme';
+import { colors, fonts, glass, radius, shadow, spacing } from '../theme';
 import { PrimaryButton, SecondaryButton } from './ui';
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
   onClose: () => void;
   onSelect: (option: CategoryOption) => void;
   // 'gasto' por defecto — los usos existentes (presupuestos, corrección de
-  // categoría de un gasto, confirmar un cargo de SMS) son todos de gasto.
+  // categoría de un gasto) son todos de gasto.
   // ConfirmCaptureCard pasa 'ingreso' cuando la transacción es un ingreso.
   kind?: 'gasto' | 'ingreso';
 }
@@ -39,80 +40,93 @@ export function CategoryPickerModal({ visible, onClose, onSelect, kind = 'gasto'
     setNewLabel('');
   };
 
+  // Antes el formulario de "adding" era un View sin scroll ni manejo de
+  // teclado: en un celular chico, con el teclado abierto, los botones
+  // "Agregar"/"Cancelar" quedaban tapados por el teclado y no había forma de
+  // tocarlos (había que cerrar el teclado a ciegas primero). Ahora todo el
+  // contenido de la hoja va dentro de un ScrollView con tope de alto (no más
+  // del ~80% de pantalla, para nunca taparse solo con el status bar/notch) y
+  // la hoja entera sube sobre el teclado en iOS vía KeyboardAvoidingView.
+  const sheetMaxHeight = Dimensions.get('window').height * 0.82;
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={closeAndReset}>
       <Pressable style={styles.backdrop} onPress={closeAndReset} />
-      <View style={styles.sheet}>
-        <Text style={styles.title}>Elegir categoría</Text>
-        {adding ? (
-          <View style={styles.addForm}>
-            <TextInput
-              style={styles.input}
-              placeholder="Nombre de la nueva categoría"
-              value={newLabel}
-              onChangeText={setNewLabel}
-            />
-            <Text style={styles.groupLabel}>Grupo</Text>
-            <View style={styles.optionsRow}>
-              {GROUP_ORDER.map((groupSlug) => (
-                <Pressable
-                  key={groupSlug}
-                  onPress={() => setNewGroupSlug(groupSlug)}
-                  style={[styles.chip, { borderColor: colors.border }, newGroupSlug === groupSlug && styles.chipSelected]}
-                >
-                  <Text style={styles.chipText}>{GROUP_LABELS[groupSlug]}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <PrimaryButton label="Agregar" onPress={submitNewCategory} />
-            <SecondaryButton label="Cancelar" onPress={() => setAdding(false)} />
-          </View>
-        ) : (
-          <>
-            <ScrollView style={{ maxHeight: 420 }}>
-              {groups.map((groupSlug) => {
-                const options = kindOptions.filter((c) => c.groupSlug === groupSlug);
-                return (
-                  <View key={groupSlug} style={styles.groupBlock}>
-                    <Text style={styles.groupLabel}>{options[0].groupLabel}</Text>
-                    <View style={styles.optionsRow}>
-                      {options.map((option) => (
-                        <Pressable
-                          key={option.subSlug}
-                          onPress={() => onSelect(option)}
-                          style={[styles.chip, { borderColor: option.color }]}
-                        >
-                          <View style={[styles.dot, { backgroundColor: option.color }]} />
-                          <Text style={styles.chipText}>{option.label}</Text>
-                        </Pressable>
-                      ))}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <BlurView intensity={50} tint="dark" style={[styles.sheet, { maxHeight: sheetMaxHeight, overflow: 'hidden' }]}>
+          <ScrollView contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled">
+            <Text style={styles.title}>Elegir categoría</Text>
+            {adding ? (
+              <View style={styles.addForm}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nombre de la nueva categoría"
+                  value={newLabel}
+                  onChangeText={setNewLabel}
+                />
+                <Text style={styles.groupLabel}>Grupo</Text>
+                <View style={styles.optionsRow}>
+                  {GROUP_ORDER.map((groupSlug) => (
+                    <Pressable
+                      key={groupSlug}
+                      onPress={() => setNewGroupSlug(groupSlug)}
+                      style={[styles.chip, { borderColor: colors.border }, newGroupSlug === groupSlug && styles.chipSelected]}
+                    >
+                      <Text style={styles.chipText}>{GROUP_LABELS[groupSlug]}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <PrimaryButton label="Agregar" onPress={submitNewCategory} />
+                <SecondaryButton label="Cancelar" onPress={() => setAdding(false)} />
+              </View>
+            ) : (
+              <>
+                {groups.map((groupSlug) => {
+                  const options = kindOptions.filter((c) => c.groupSlug === groupSlug);
+                  return (
+                    <View key={groupSlug} style={styles.groupBlock}>
+                      <Text style={styles.groupLabel}>{options[0].groupLabel}</Text>
+                      <View style={styles.optionsRow}>
+                        {options.map((option) => (
+                          <Pressable
+                            key={option.subSlug}
+                            onPress={() => onSelect(option)}
+                            style={[styles.chip, { borderColor: option.color }]}
+                          >
+                            <View style={[styles.dot, { backgroundColor: option.color }]} />
+                            <Text style={styles.chipText}>{option.label}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
                     </View>
-                  </View>
-                );
-              })}
-            </ScrollView>
-            {isAdmin && (
-              <Pressable onPress={() => setAdding(true)} style={styles.addLink}>
-                <Text style={styles.addLinkText}>+ Agregar categoría</Text>
-              </Pressable>
+                  );
+                })}
+                {isAdmin && (
+                  <Pressable onPress={() => setAdding(true)} style={styles.addLink}>
+                    <Text style={styles.addLinkText}>+ Agregar categoría</Text>
+                  </Pressable>
+                )}
+              </>
             )}
-          </>
-        )}
-      </View>
+          </ScrollView>
+        </BlurView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(35,31,26,0.45)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(6,15,12,0.55)' },
   sheet: {
-    backgroundColor: colors.card,
+    backgroundColor: glass.bg,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    padding: spacing.lg,
-    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: glass.border,
+    borderBottomWidth: 0,
     ...shadow.raised,
   },
+  sheetContent: { padding: spacing.lg, gap: spacing.md },
   title: { fontFamily: fonts.display, fontSize: 18, color: colors.textPrimary },
   groupBlock: { marginBottom: spacing.md, gap: spacing.xs },
   groupLabel: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6 },

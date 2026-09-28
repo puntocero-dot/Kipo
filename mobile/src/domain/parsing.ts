@@ -3,7 +3,6 @@
 // esquema), que deben evaluarse ANTES que el diccionario del sistema — ver
 // docs/NLP_PARSING.md § Aprendizaje por corrección.
 import { parseExpenseText } from '@parsing/expenseTextParser.mjs';
-import { parseBankSms as parseBankSmsRaw } from '@parsing/smsParser.mjs';
 import { findCategory } from './categories';
 import type { CategorizationRule } from './types';
 
@@ -71,8 +70,4 @@ export function parseExpenseWithFamilyRules(
     needsReview: isIncome ? base.amount === null : base.amount === null || groupSlug === null,
     rawText: capped,
   };
-}
-
-export function parseBankSms(rawSms: string, options?: Parameters<typeof parseBankSmsRaw>[1]) {
-  return parseBankSmsRaw(capInput(rawSms), options);
 }

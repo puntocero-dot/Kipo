@@ -4,14 +4,13 @@
 
 | Capa | Elección | Por qué |
 |---|---|---|
-| App móvil | **React Native + Expo (TypeScript)** | Un solo código para iOS/Android, EAS Build para releases, gran ecosistema de módulos nativos (SMS, voz, notificaciones) |
+| App móvil | **React Native + Expo (TypeScript)** | Un solo código para iOS/Android, EAS Build para releases, gran ecosistema de módulos nativos (voz, notificaciones) |
 | Base de datos local | **SQLite** vía `expo-sqlite`/`op-sqlite` + **Drizzle ORM** | Offline-first real, tipado end-to-end, migraciones simples, funciona sin red desde el día uno |
 | Backend | **Supabase** (Postgres + Auth + Realtime + Edge Functions + Storage) | Modelo relacional (calza con el esquema diseñado), Row Level Security nativo para aislar familias, Realtime para sincronizar entre miembros sin infraestructura propia |
 | Sincronización | Cola local (`sync_log`) + Supabase Realtime | Escritura instantánea local; subida en segundo plano; cambios de otros miembros llegan por suscripción, no por polling |
-| NLP de captura | Reglas locales (`src/parsing/*`) + **Claude Haiku** como fallback vía Edge Function | Instantáneo y gratis para el caso común; LLM solo para texto ambiguo, sin exponer la API key en el cliente |
+| NLP de captura | Kipobot: **Gemini 2.5 Flash-Lite** (función serverless en Vercel) como ruta principal + reglas locales (`src/parsing/*`) como respaldo sin red | El modelo pregunta lo que falte en vez de adivinar; el más barato entre los proveedores comparados (Gemini/DeepSeek/Grok/Kimi); la API key nunca viaja al cliente |
 | Notificaciones push | **Expo Push Notifications** + Edge Function programada (cron) | Cubre recordatorios de pago y alertas de presupuesto sin servidor propio |
 | Voz a texto | `expo-speech-recognition` (o `@react-native-voice/voice`) | Dictado nativo del sistema operativo, sin costo de API |
-| Lectura de SMS | Módulo nativo Android (`READ_SMS`/`RECEIVE_SMS`) + Share Extension en iOS | Ver limitación de plataforma en `docs/NLP_PARSING.md` — iOS no permite lectura de SMS en segundo plano por apps de terceros |
 | Gráficos del dashboard | `victory-native` o `react-native-svg` + `react-native-svg-charts` | Livianos, se ven bien en ambas plataformas, suficientes para dona/barras |
 
 ## Por qué offline-first con Supabase (y no Firebase)
@@ -54,16 +53,12 @@ experiencia rápida incluso offline.
   sincronización a mano — trabajo que Supabase ya resuelve out of the box para
   el tamaño de este producto.
 
-## Seguridad y privacidad (SMS y datos financieros)
+## Seguridad y privacidad (Kipobot y datos financieros)
 
-- El permiso de lectura de SMS se solicita de forma explícita y granular, y se
-  puede desactivar por dispositivo (`devices.sms_reader_enabled`) — nunca es
-  obligatorio para usar la app.
-- El procesamiento de SMS ocurre **en el dispositivo**; solo el resultado
-  parseado (monto, comercio, tipo) se sincroniza a Supabase, no el texto
-  bancario completo con datos sensibles como saldos, salvo que el usuario lo
-  confirme como transacción (en cuyo caso `raw_sms`/`raw_text` se guardan para
-  auditar al parser, protegidos por las mismas políticas RLS de la familia).
+- El texto que la persona le escribe a Kipobot se envía a la API de Gemini
+  únicamente para interpretar monto/categoría — no se usa para entrenar
+  modelos de terceros (ver `docs/NLP_PARSING.md` §2 y la política de
+  privacidad de la landing).
 - RLS en Postgres es la única vía de acceso a los datos — ni siquiera un bug
   en el cliente puede filtrar datos de otra familia, porque la base de datos
   misma lo impide.
