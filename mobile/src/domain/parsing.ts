@@ -6,12 +6,11 @@ import { parseExpenseText } from '@parsing/expenseTextParser.mjs';
 import { findCategory } from './categories';
 import type { CategorizationRule } from './types';
 
-// Algunos patrones de smsParser.mjs/expenseTextParser.mjs combinan
-// comodines perezosos (`[\s\S]*?`) que, sobre texto largo y adversarial que
-// nunca matchea, pueden degradar a backtracking cuadrático — un límite
-// generoso (nadie escribe/pega un gasto o SMS bancario real de más de 4000
-// caracteres) evita que eso se vuelva un problema de rendimiento real sin
-// tener que reescribir esas regex.
+// Algunos patrones de expenseTextParser.mjs combinan comodines perezosos
+// (`[\s\S]*?`) que, sobre texto largo y adversarial que nunca matchea, pueden
+// degradar a backtracking cuadrático — un límite generoso (nadie
+// escribe/pega un gasto real de más de 4000 caracteres) evita que eso se
+// vuelva un problema de rendimiento real sin tener que reescribir esas regex.
 const MAX_INPUT_LENGTH = 4000;
 function capInput(text: string): string {
   return text.length > MAX_INPUT_LENGTH ? text.slice(0, MAX_INPUT_LENGTH) : text;

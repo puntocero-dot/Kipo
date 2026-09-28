@@ -2,9 +2,8 @@
 
 > La lectura de SMS bancarios que documentaba antes esta página se quitó por
 > completo de la app (reemplazada por Kipobot, ver §2 más abajo) — el
-> permiso de Android, la pantalla y las tablas asociadas ya no existen.
-> `src/parsing/smsParser.mjs` se deja en el repo solo como referencia/demo
-> ejecutable (`examples/demo.mjs`), pero ninguna pantalla de la app lo llama.
+> permiso de Android, la pantalla, las tablas asociadas y el parser de
+> referencia (`src/parsing/smsParser.mjs`) ya no existen en el repo.
 
 Implementación de referencia (ejecutable, sin dependencias):
 
