@@ -83,7 +83,7 @@ export default function DashboardScreen() {
           <Text style={styles.monthLabel}>Balance de {MONTH_NAMES[selectedDate.getMonth()]}</Text>
         </View>
 
-        {months.length > 1 && (
+        {months.length > 0 && (
           <View style={styles.chipsRow}>
             {months.map((m) => (
               <Pressable

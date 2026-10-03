@@ -2,6 +2,7 @@ import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../domain/authStore';
+import { confirmAction, notify } from '../lib/confirm';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 // Se muestra cuando ya hay sesión pero todavía no hay un espacio de trabajo
@@ -9,7 +10,7 @@ import { colors, fonts, radius, shadow, spacing } from '../theme';
 // usuario pertenece a varios espacios y tiene que elegir cuál ver — ver
 // docs/TESTING_ENVIRONMENT.md y supabase/migrations/0003_multi_workspace_and_rls.sql.
 export function WorkspaceGateScreen() {
-  const { memberships, loadingMemberships, selectFamily, createFamily, joinFamily, signOut } = useAuth();
+  const { memberships, loadingMemberships, selectFamily, deleteFamily, createFamily, joinFamily, signOut } = useAuth();
   const url = Linking.useURL();
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [name, setName] = useState('');
@@ -75,6 +76,24 @@ export function WorkspaceGateScreen() {
             <Pressable key={m.familyId} style={styles.workspaceRow} onPress={() => selectFamily(m.familyId)}>
               <Text style={styles.workspaceName}>{m.familyName}</Text>
               <Text style={styles.workspaceRole}>{m.role === 'admin' ? 'Administrador' : 'Miembro'}</Text>
+              {m.role === 'admin' && (
+                <Pressable
+                  hitSlop={8}
+                  onPress={() =>
+                    confirmAction(
+                      'Borrar espacio',
+                      `¿Borrar "${m.familyName}" con todos sus datos? No se puede deshacer.`,
+                      'Borrar',
+                      async () => {
+                        const err = await deleteFamily(m.familyId);
+                        if (err) notify('No se pudo borrar', err);
+                      },
+                    )
+                  }
+                >
+                  <Text style={styles.deleteText}>Borrar</Text>
+                </Pressable>
+              )}
             </Pressable>
           ))}
         </View>
@@ -146,6 +165,7 @@ const styles = StyleSheet.create({
     borderColor: colors.gridline,
   },
   workspaceName: { fontFamily: fonts.bodySemibold, fontSize: 14, color: colors.textPrimary },
+  deleteText: { fontFamily: fonts.bodySemibold, fontSize: 12, color: colors.critical, marginLeft: spacing.sm },
   workspaceRole: { fontFamily: fonts.body, fontSize: 12, color: colors.muted },
   tabRow: { flexDirection: 'row', gap: spacing.xs },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: radius.pill, alignItems: 'center', backgroundColor: colors.page },

@@ -214,14 +214,21 @@ export function computeMonthlyTrend(transactions: Transaction[], monthsBack = 6,
   return points;
 }
 
-// Meses con al menos un movimiento, más recientes primero — para poblar el
-// selector de mes del Historial sin inventar meses vacíos.
-export function availableMonths(transactions: Transaction[]): MonthOption[] {
-  const keys = new Set(transactions.map((t) => monthKey(t.occurredAt)));
-  return Array.from(keys)
-    .sort((a, b) => (a < b ? 1 : -1))
-    .map((key) => {
-      const [year, month] = key.split('-').map(Number);
-      return { key, label: `${MONTH_NAMES_LONG[month - 1]} ${year}` };
-    });
+// Meses para el selector, más recientes primero: todos los meses desde el
+// primer movimiento (o, como mínimo, los últimos 12) hasta el actual — así se
+// puede elegir un mes aunque esté vacío, en vez de que simplemente no exista.
+export function availableMonths(transactions: Transaction[], now = new Date()): MonthOption[] {
+  const currentIdx = now.getFullYear() * 12 + now.getMonth();
+  let startIdx = currentIdx - 11;
+  for (const t of transactions) {
+    const d = new Date(t.occurredAt);
+    startIdx = Math.min(startIdx, d.getFullYear() * 12 + d.getMonth());
+  }
+  const options: MonthOption[] = [];
+  for (let idx = currentIdx; idx >= startIdx; idx--) {
+    const year = Math.floor(idx / 12);
+    const month = idx % 12;
+    options.push({ key: `${year}-${String(month + 1).padStart(2, '0')}`, label: `${MONTH_NAMES_LONG[month]} ${year}` });
+  }
+  return options;
 }

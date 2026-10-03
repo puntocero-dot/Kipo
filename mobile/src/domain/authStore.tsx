@@ -34,6 +34,7 @@ interface AuthContextValue {
   createFamily: (name: string) => Promise<string | null>;
   joinFamily: (code: string, memberName: string) => Promise<string | null>;
   selectFamily: (familyId: string) => void;
+  deleteFamily: (familyId: string) => Promise<string | null>;
   clearActiveFamily: () => void;
   // Vuelve a leer memberships (nombre de familia, rol) — útil después de
   // renombrar la familia, para que el nombre cacheado aquí (usado en
@@ -170,6 +171,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [session, loadMemberships, selectFamily],
   );
 
+  const deleteFamily = useCallback(
+    async (familyId: string) => {
+      const { error } = await supabase!.rpc('delete_family', { target_family_id: familyId });
+      if (error) return error.message;
+      if (activeFamilyId === familyId) clearActiveFamily();
+      if (session) await loadMemberships(session.user.id);
+      return null;
+    },
+    [session, loadMemberships, activeFamilyId, clearActiveFamily],
+  );
+
   const activeMembership = memberships.find((m) => m.familyId === activeFamilyId) ?? null;
 
   const refreshMemberships = useCallback(async () => {
@@ -190,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createFamily,
       joinFamily,
       selectFamily,
+      deleteFamily,
       clearActiveFamily,
       refreshMemberships,
     }),
@@ -206,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createFamily,
       joinFamily,
       selectFamily,
+      deleteFamily,
       clearActiveFamily,
       refreshMemberships,
     ],

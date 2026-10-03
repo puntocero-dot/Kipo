@@ -62,7 +62,7 @@ export default function HistoryScreen() {
         />
       </View>
 
-      {months.length > 1 && (
+      {months.length > 0 && (
         <View style={styles.chipsRow}>
           <Pressable onPress={() => setMonthFilter(null)} style={[styles.chip, !monthFilter && styles.chipActive]}>
             <Text style={[styles.chipText, !monthFilter && styles.chipTextActive]}>Todos los meses</Text>

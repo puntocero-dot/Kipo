@@ -8,7 +8,7 @@ import { Card, Screen, SectionTitle } from '../../src/components/ui';
 import { useAuth } from '../../src/domain/authStore';
 import { useIsAppOwner } from '../../src/domain/ownerStore';
 import { useKipo } from '../../src/domain/store';
-import { confirmAction } from '../../src/lib/confirm';
+import { confirmAction, notify } from '../../src/lib/confirm';
 import { isSupabaseConfigured } from '../../src/lib/supabase';
 import { colors, fonts, radius, spacing } from '../../src/theme';
 
@@ -98,6 +98,24 @@ export default function MoreScreen() {
           <Pressable style={styles.secondaryButton} onPress={auth.clearActiveFamily}>
             <Text style={styles.secondaryButtonText}>Crear o unirme a otro espacio</Text>
           </Pressable>
+          {auth.activeMembership?.role === 'admin' && (
+            <Pressable
+              style={styles.resetButton}
+              onPress={() =>
+                confirmAction(
+                  'Borrar espacio',
+                  `¿Borrar "${auth.activeMembership?.familyName}" con todos sus movimientos, presupuestos y miembros? No se puede deshacer.`,
+                  'Borrar',
+                  async () => {
+                    const err = await auth.deleteFamily(auth.activeMembership!.familyId);
+                    if (err) notify('No se pudo borrar', err);
+                  },
+                )
+              }
+            >
+              <Text style={styles.resetText}>Borrar este espacio</Text>
+            </Pressable>
+          )}
           <Pressable
             style={styles.resetButton}
             onPress={() => confirmAction('Cerrar sesión', '¿Seguro que quieres cerrar sesión?', 'Cerrar sesión', () => auth.signOut())}
