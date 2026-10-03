@@ -55,6 +55,20 @@ function buildSchema(categoryValues) {
   };
 }
 
+// Respaldo cuando el modelo no devuelve el monto aunque el usuario lo escribió
+// ("Super selectos 51" → 51). Toma el último número del mensaje actual y, si
+// no hay, el último de los mensajes previos del usuario.
+function extractAmount(texts) {
+  for (let i = texts.length - 1; i >= 0; i -= 1) {
+    const matches = String(texts[i]).match(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?/g);
+    if (!matches) continue;
+    const raw = matches[matches.length - 1];
+    const n = Number(raw.includes(',') && /,\d{3}/.test(raw) ? raw.replace(/,/g, '') : raw.replace(',', '.'));
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
 const hits = new Map();
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 20; // más alto que kipobot.js: cada gasto real puede tomar 1-2 turnos de aclaración.
@@ -130,7 +144,7 @@ module.exports = async (req, res) => {
         contents,
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 300,
+          maxOutputTokens: 1024, // holgado: los modelos con "thinking" gastan parte del presupuesto antes del JSON
           responseMimeType: 'application/json',
           responseSchema: buildSchema(categoryValues),
         },
@@ -159,12 +173,20 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // Defensivo: si el modelo dijo "ready" pero de verdad no dio un monto
-    // válido, no dejamos pasar un gasto de $0 — se trata como si hubiera
-    // pedido aclaración, con una pregunta genérica de respaldo.
-    if (parsed.status === 'ready' && (typeof parsed.amount !== 'number' || parsed.amount <= 0)) {
-      res.status(200).json({ status: 'needs_clarification', question: '¿Cuánto fue el monto?' });
-      return;
+    // El modelo a veces responde "ready" sin monto, o pregunta por el monto
+    // aunque el usuario ya lo escribió. Antes de volver a preguntar se busca
+    // el número en el texto; solo si de verdad no hay ninguno se pregunta.
+    const asksAmount = parsed.status === 'needs_clarification' && /monto|cu[aá]nto/i.test(parsed.question || '');
+    const missingAmount = parsed.status === 'ready' && (typeof parsed.amount !== 'number' || parsed.amount <= 0);
+    if (asksAmount || missingAmount) {
+      const userTexts = [...history.filter((m) => m && m.role === 'user' && typeof m.text === 'string').map((m) => m.text), message];
+      const fallbackAmount = extractAmount(userTexts);
+      if (fallbackAmount) {
+        parsed = { ...parsed, status: 'ready', amount: fallbackAmount, confidence: 'low' };
+      } else if (missingAmount) {
+        res.status(200).json({ status: 'needs_clarification', question: '¿Cuánto fue el monto?' });
+        return;
+      }
     }
 
     if (parsed.status === 'ready') {
