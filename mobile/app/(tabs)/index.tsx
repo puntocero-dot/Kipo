@@ -10,8 +10,11 @@ import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen, SectionTitle } from '../../src/components/ui';
 import { useAccentColor } from '../../src/domain/accentStore';
+import { useAuth } from '../../src/domain/authStore';
+import { isSupabaseConfigured } from '../../src/lib/supabase';
 import {
   availableMonths,
+  availableYears,
   computeBudgetUsage,
   computeMacroDistribution,
   computeMonthlyTrend,
@@ -43,20 +46,23 @@ export default function DashboardScreen() {
   // de tendencia/futuro y siempre usan `now` real, sin importar este filtro.
   const [monthKeySel, setMonthKeySel] = useState(() => monthKey(now.toISOString()));
   const months = useMemo(() => availableMonths(state.transactions), [state.transactions]);
+  const years = useMemo(() => availableYears(state.transactions), [state.transactions]);
+  // La clave es "2026-09" (un mes) o "2026" (todo el año).
+  const wholeYear = !monthKeySel.includes('-');
   const selectedDate = useMemo(() => {
     const [year, month] = monthKeySel.split('-').map(Number);
-    return new Date(year, month - 1, 1);
+    return new Date(year, (month || 1) - 1, 1);
   }, [monthKeySel]);
 
   // Antes se recalculaban en cada render (incluido cada tecla escrita en
   // cualquier formulario de esta pantalla) — con useMemo solo se recalculan
   // cuando de verdad cambian las transacciones/presupuestos/mes elegido.
-  const summary = useMemo(() => computeMonthSummary(state.transactions, selectedDate), [state.transactions, selectedDate]);
-  const macro = useMemo(() => computeMacroDistribution(state.transactions, selectedDate), [state.transactions, selectedDate]);
+  const summary = useMemo(() => computeMonthSummary(state.transactions, selectedDate, wholeYear), [state.transactions, selectedDate, wholeYear]);
+  const macro = useMemo(() => computeMacroDistribution(state.transactions, selectedDate, wholeYear), [state.transactions, selectedDate, wholeYear]);
   const trend = useMemo(() => computeMonthlyTrend(state.transactions, 6, now), [state.transactions, now]);
   const budgetUsage = useMemo(
-    () => computeBudgetUsage(state.budgets, state.transactions, selectedDate),
-    [state.budgets, state.transactions, selectedDate],
+    () => computeBudgetUsage(state.budgets, state.transactions, selectedDate, wholeYear),
+    [state.budgets, state.transactions, selectedDate, wholeYear],
   );
   const topBudgets = useMemo(
     () => [...budgetUsage].sort((a, b) => STATUS_RANK[b.status] - STATUS_RANK[a.status] || b.pct - a.pct).slice(0, 4),
@@ -66,12 +72,13 @@ export default function DashboardScreen() {
   const latest = useMemo(
     () =>
       [...state.transactions]
-        .filter((t) => monthKey(t.occurredAt) === monthKeySel)
+        .filter((t) => monthKey(t.occurredAt).startsWith(monthKeySel))
         .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
         .slice(0, 6),
     [state.transactions, monthKeySel],
   );
 
+  const auth = isSupabaseConfigured ? useAuth() : null;
   const memberName = (id: string) => state.members.find((m) => m.id === id)?.name;
   const usedPct = summary.income > 0 ? Math.min(summary.expenses / summary.income, 1) : 0;
 
@@ -80,11 +87,33 @@ export default function DashboardScreen() {
       <Screen fabClearance={72}>
         <View>
           <Text style={styles.greeting}>{state.familyName}</Text>
-          <Text style={styles.monthLabel}>Balance de {MONTH_NAMES[selectedDate.getMonth()]}</Text>
+          {auth && auth.memberships.length > 1 && (
+            <View style={[styles.chipsRow, { marginTop: spacing.xs }]}>
+              {auth.memberships.map((m) => (
+                <Pressable
+                  key={m.familyId}
+                  onPress={() => auth.selectFamily(m.familyId)}
+                  style={[styles.chip, auth.activeFamilyId === m.familyId && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, auth.activeFamilyId === m.familyId && styles.chipTextActive]}>{m.familyName}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+          <Text style={styles.monthLabel}>{wholeYear ? `Balance de ${selectedDate.getFullYear()}` : `Balance de ${MONTH_NAMES[selectedDate.getMonth()]}`}</Text>
         </View>
 
         {months.length > 0 && (
           <View style={styles.chipsRow}>
+            {years.map((y) => (
+              <Pressable
+                key={y.key}
+                onPress={() => setMonthKeySel(y.key)}
+                style={[styles.chip, monthKeySel === y.key && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, monthKeySel === y.key && styles.chipTextActive]}>{y.label}</Text>
+              </Pressable>
+            ))}
             {months.map((m) => (
               <Pressable
                 key={m.key}
@@ -120,7 +149,7 @@ export default function DashboardScreen() {
           <View style={styles.track}>
             <View style={[styles.fill, { width: `${usedPct * 100}%` }]} />
           </View>
-          <Text style={styles.trackCaption}>{(usedPct * 100).toFixed(0)}% de tus ingresos ya se gastó este mes</Text>
+          <Text style={styles.trackCaption}>{(usedPct * 100).toFixed(0)}% de tus ingresos ya se gastó {wholeYear ? 'este año' : 'este mes'}</Text>
         </LinearGradient>
 
         <Card>

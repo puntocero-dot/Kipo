@@ -5,7 +5,7 @@ import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen } from '../../src/components/ui';
 import { GROUP_LABELS, GROUP_ORDER, categoryColor } from '../../src/domain/categories';
-import { availableMonths, formatDayLabel, monthKey } from '../../src/domain/selectors';
+import { availableMonths, availableYears, formatDayLabel, monthKey } from '../../src/domain/selectors';
 import { useKipo } from '../../src/domain/store';
 import { confirmAction } from '../../src/lib/confirm';
 import type { Transaction } from '../../src/domain/types';
@@ -18,13 +18,14 @@ export default function HistoryScreen() {
   const [monthFilter, setMonthFilter] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
+  const years = useMemo(() => availableYears(state.transactions), [state.transactions]);
   const months = useMemo(() => availableMonths(state.transactions), [state.transactions]);
 
   const filtered = useMemo(() => {
     return state.transactions
       .filter((t) => (groupFilter ? t.groupSlug === groupFilter : true))
       .filter((t) => (memberFilter ? t.userId === memberFilter : true))
-      .filter((t) => (monthFilter ? monthKey(t.occurredAt) === monthFilter : true))
+      .filter((t) => (monthFilter ? monthKey(t.occurredAt).startsWith(monthFilter) : true))
       .filter((t) => {
         if (!query.trim()) return true;
         const haystack = `${t.description} ${t.merchant ?? ''} ${t.rawText ?? ''}`.toLowerCase();
@@ -67,6 +68,15 @@ export default function HistoryScreen() {
           <Pressable onPress={() => setMonthFilter(null)} style={[styles.chip, !monthFilter && styles.chipActive]}>
             <Text style={[styles.chipText, !monthFilter && styles.chipTextActive]}>Todos los meses</Text>
           </Pressable>
+          {years.map((y) => (
+            <Pressable
+              key={y.key}
+              onPress={() => setMonthFilter(monthFilter === y.key ? null : y.key)}
+              style={[styles.chip, monthFilter === y.key && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, monthFilter === y.key && styles.chipTextActive]}>{y.label}</Text>
+            </Pressable>
+          ))}
           {months.map((m) => (
             <Pressable
               key={m.key}

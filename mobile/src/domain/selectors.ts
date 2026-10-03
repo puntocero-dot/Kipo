@@ -1,13 +1,15 @@
 import { GROUP_LABELS, categoryColor } from './categories';
 import type { Budget, Reminder, Transaction } from './types';
 
-export function isSameMonth(iso: string, reference: Date): boolean {
+export function isSameMonth(iso: string, reference: Date, wholeYear = false): boolean {
   const d = new Date(iso);
-  return d.getFullYear() === reference.getFullYear() && d.getMonth() === reference.getMonth();
+  return d.getFullYear() === reference.getFullYear() && (wholeYear || d.getMonth() === reference.getMonth());
 }
 
-export function monthTransactions(transactions: Transaction[], reference = new Date()): Transaction[] {
-  return transactions.filter((t) => isSameMonth(t.occurredAt, reference));
+// `wholeYear` amplía el período de "el mes de reference" a "todo el año de
+// reference" (filtro "Todo 2026" del Inicio).
+export function monthTransactions(transactions: Transaction[], reference = new Date(), wholeYear = false): Transaction[] {
+  return transactions.filter((t) => isSameMonth(t.occurredAt, reference, wholeYear));
 }
 
 export interface MonthSummary {
@@ -16,8 +18,8 @@ export interface MonthSummary {
   balance: number;
 }
 
-export function computeMonthSummary(transactions: Transaction[], reference = new Date()): MonthSummary {
-  const monthTx = monthTransactions(transactions, reference);
+export function computeMonthSummary(transactions: Transaction[], reference = new Date(), wholeYear = false): MonthSummary {
+  const monthTx = monthTransactions(transactions, reference, wholeYear);
   const income = monthTx.filter((t) => t.type === 'ingreso').reduce((sum, t) => sum + t.amount, 0);
   const expenses = monthTx.filter((t) => t.type === 'gasto').reduce((sum, t) => sum + t.amount, 0);
   return { income, expenses, balance: income - expenses };
@@ -48,8 +50,8 @@ const MACRO_META: Record<MacroSlice['key'], { label: string; color: string }> = 
   salidas: { label: 'Salidas y Ocio', color: categoryColor('salidas_convivencia') },
 };
 
-export function computeMacroDistribution(transactions: Transaction[], reference = new Date()): MacroSlice[] {
-  const monthExpenses = monthTransactions(transactions, reference).filter((t) => t.type === 'gasto');
+export function computeMacroDistribution(transactions: Transaction[], reference = new Date(), wholeYear = false): MacroSlice[] {
+  const monthExpenses = monthTransactions(transactions, reference, wholeYear).filter((t) => t.type === 'gasto');
   const totals: Record<MacroSlice['key'], number> = { fijos: 0, variables: 0, salidas: 0 };
 
   for (const t of monthExpenses) {
@@ -77,8 +79,9 @@ export function computeBudgetUsage(
   budgets: Budget[],
   transactions: Transaction[],
   reference = new Date(),
+  wholeYear = false,
 ): BudgetUsage[] {
-  const monthExpenses = monthTransactions(transactions, reference).filter((t) => t.type === 'gasto');
+  const monthExpenses = monthTransactions(transactions, reference, wholeYear).filter((t) => t.type === 'gasto');
   const specificGroupSlugs = new Set(budgets.filter((b) => b.groupSlug).map((b) => b.groupSlug));
 
   return budgets.map((budget) => {
@@ -96,7 +99,8 @@ export function computeBudgetUsage(
       : monthExpenses
           .filter((t) => (t.budgetId ? t.budgetId === budget.id : !t.groupSlug || !specificGroupSlugs.has(t.groupSlug)))
           .reduce((s, t) => s + t.amount, 0);
-    const pct = budget.amountLimit > 0 ? spent / budget.amountLimit : 0;
+    // Los límites son mensuales: en la vista anual se comparan contra 12 meses.
+    const pct = budget.amountLimit > 0 ? spent / (wholeYear ? budget.amountLimit * 12 : budget.amountLimit) : 0;
     const status: BudgetUsage['status'] = pct >= 1 ? 'over' : pct >= budget.alertThresholdPct / 100 ? 'warning' : 'ok';
     return { ...budget, spent, pct, status };
   });
@@ -231,4 +235,14 @@ export function availableMonths(transactions: Transaction[], now = new Date()): 
     options.push({ key: `${year}-${String(month + 1).padStart(2, '0')}`, label: `${MONTH_NAMES_LONG[month]} ${year}` });
   }
   return options;
+}
+
+// Años con datos (más el actual), más recientes primero — alimenta la opción
+// "Todo 2026" del selector de período.
+export function availableYears(transactions: Transaction[], now = new Date()): MonthOption[] {
+  const years = new Set<number>([now.getFullYear()]);
+  for (const t of transactions) years.add(new Date(t.occurredAt).getFullYear());
+  return Array.from(years)
+    .sort((a, b) => b - a)
+    .map((y) => ({ key: String(y), label: `Todo ${y}` }));
 }
