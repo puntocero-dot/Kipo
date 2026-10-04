@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BudgetBarRow } from '../../src/components/BudgetBarRow';
 import { DonutChart } from '../../src/components/DonutChart';
 import { MonthlyTrendChart } from '../../src/components/MonthlyTrendChart';
@@ -104,7 +104,7 @@ export default function DashboardScreen() {
         </View>
 
         {months.length > 0 && (
-          <View style={styles.chipsRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
             {years.map((y) => (
               <Pressable
                 key={y.key}
@@ -123,7 +123,7 @@ export default function DashboardScreen() {
                 <Text style={[styles.chipText, monthKeySel === m.key && styles.chipTextActive]}>{m.label}</Text>
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         <LinearGradient
@@ -228,10 +228,6 @@ export default function DashboardScreen() {
           )}
         </Card>
       </Screen>
-
-      <Pressable style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85 }]} onPress={() => router.push('/chat')}>
-        <Ionicons name="add" size={28} color="#fff" />
-      </Pressable>
     </TabScreenGuard>
   );
 }
@@ -240,6 +236,7 @@ const styles = StyleSheet.create({
   greeting: { fontFamily: fonts.display, fontSize: 24, color: colors.textPrimary },
   monthLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.muted, marginTop: 2, textTransform: 'capitalize' },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chipsScroll: { flexDirection: 'row', gap: spacing.xs, paddingRight: spacing.lg },
   chip: { paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },
@@ -262,16 +259,4 @@ const styles = StyleSheet.create({
   reminderDue: { fontFamily: fonts.bodyMedium, fontSize: 13, color: colors.textSecondary },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   link: { color: colors.primary, fontFamily: fonts.bodySemibold, fontSize: 13 },
-  fab: {
-    position: 'absolute',
-    right: spacing.lg,
-    bottom: spacing.xl,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadow.floating,
-  },
 });

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen } from '../../src/components/ui';
@@ -64,7 +64,7 @@ export default function HistoryScreen() {
       </View>
 
       {months.length > 0 && (
-        <View style={styles.chipsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           <Pressable onPress={() => setMonthFilter(null)} style={[styles.chip, !monthFilter && styles.chipActive]}>
             <Text style={[styles.chipText, !monthFilter && styles.chipTextActive]}>Todos los meses</Text>
           </Pressable>
@@ -86,7 +86,7 @@ export default function HistoryScreen() {
               <Text style={[styles.chipText, monthFilter === m.key && styles.chipTextActive]}>{m.label}</Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
       )}
 
       <View style={styles.chipsRow}>
@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
   },
   search: { flex: 1, minWidth: 0, paddingVertical: 11, fontFamily: fonts.body, fontSize: 14, color: colors.textPrimary, outlineWidth: 0 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chipsScroll: { flexDirection: 'row', gap: spacing.xs, paddingRight: spacing.lg },
   chip: { paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontFamily: fonts.bodyMedium, fontSize: 12, color: colors.textSecondary },

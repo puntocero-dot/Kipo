@@ -1,14 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CategoryPickerModal } from '../../src/components/CategoryPickerModal';
-import { ConfirmCaptureCard } from '../../src/components/ConfirmCaptureCard';
-import { TabScreenGuard } from '../../src/components/TabScreenGuard';
-import { CATEGORY_OPTIONS, findCategory } from '../../src/domain/categories';
-import { useKipo } from '../../src/domain/store';
-import { parseExpenseWithAI, type AiChatTurn } from '../../src/lib/aiExpense';
-import { notify } from '../../src/lib/confirm';
-import { colors, fonts, radius, spacing } from '../../src/theme';
+import { CategoryPickerModal } from './CategoryPickerModal';
+import { ConfirmCaptureCard } from './ConfirmCaptureCard';
+import { CATEGORY_OPTIONS, findCategory } from '../domain/categories';
+import { useKipo } from '../domain/store';
+import { parseExpenseWithAI, type AiChatTurn } from '../lib/aiExpense';
+import { notify } from '../lib/confirm';
+import { colors, fonts, radius, spacing } from '../theme';
 
 const EXAMPLES = [
   'Almuerzo con mi esposa en restaurante $35',
@@ -26,7 +25,7 @@ type ChatMessage =
   | { kind: 'bot-note'; id: string; text: string }
   | { kind: 'transaction'; id: string; transactionId: string };
 
-export default function ChatScreen() {
+export function ChatPanel({ onSaved }: { onSaved?: () => void } = {}) {
   const { state, currentUserId, addTransactionFromText, addTransactionFromDraft, confirmTransaction, deleteTransaction, correctCategory } =
     useKipo();
   const [input, setInput] = useState('');
@@ -115,8 +114,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <TabScreenGuard>
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       <ScrollView
         ref={scrollRef}
         style={styles.list}
@@ -234,7 +232,6 @@ export default function ChatScreen() {
         }}
       />
     </KeyboardAvoidingView>
-    </TabScreenGuard>
   );
 }
 

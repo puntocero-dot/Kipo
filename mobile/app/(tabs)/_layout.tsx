@@ -2,8 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FamilyTreeIcon, VoiceCaptureIcon } from '../../src/components/icons/FeatureIcons';
+import { ChatBubble } from '../../src/components/ChatBubble';
+import { FamilyTreeIcon } from '../../src/components/icons/FeatureIcons';
 import { useAccentColor } from '../../src/domain/accentStore';
 import { colors, fonts, glass } from '../../src/theme';
 
@@ -24,6 +26,7 @@ export default function TabsLayout() {
   const tabBarHeight = 54 + insets.bottom;
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.page },
@@ -55,14 +58,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
-        options={{
-          title: 'Registrar gasto',
-          tabBarLabel: 'Registrar',
-          tabBarIcon: ({ focused }) => <VoiceCaptureIcon size={22} color={focused ? accent : colors.muted} />,
-        }}
-      />
-      <Tabs.Screen
         name="history"
         options={{
           title: 'Historial',
@@ -79,5 +74,7 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    <ChatBubble bottomOffset={tabBarHeight} />
+    </View>
   );
 }
