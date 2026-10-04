@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FamilyTrackingIcon } from '../../src/components/icons/FeatureIcons';
+import { WhatsAppLinkCard } from '../../src/components/WhatsAppLinkCard';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { Card, Screen, SectionTitle } from '../../src/components/ui';
 import { useAuth } from '../../src/domain/authStore';
@@ -83,6 +84,8 @@ export default function MoreScreen() {
           />
         )}
       </Card>
+
+      {auth && <WhatsAppLinkCard />}
 
       {auth ? (
         <Card>
