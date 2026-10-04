@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { blurActiveElement } from '../lib/confirm';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
@@ -13,6 +14,10 @@ interface Props {
 // del código de la app) — suficiente para que la aceptación en el registro
 // sea informada, no un checkbox ciego.
 export function TermsModal({ visible, onClose }: Props) {
+  React.useEffect(() => {
+    if (visible) blurActiveElement();
+  }, [visible]);
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />

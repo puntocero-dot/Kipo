@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Dimensions, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CATEGORY_OPTIONS, GROUP_LABELS, GROUP_ORDER, type CategoryOption } from '../domain/categories';
 import { useKipo } from '../domain/store';
+import { blurActiveElement } from '../lib/confirm';
 import { colors, fonts, glass, radius, shadow, spacing } from '../theme';
 import { PrimaryButton, SecondaryButton } from './ui';
 
@@ -26,6 +27,10 @@ export function CategoryPickerModal({ visible, onClose, onSelect, kind = 'gasto'
   const allOptions = [...CATEGORY_OPTIONS, ...state.customCategories];
   const kindOptions = allOptions.filter((c) => c.kind === kind);
   const groups = Array.from(new Set(kindOptions.map((c) => c.groupSlug)));
+
+  React.useEffect(() => {
+    if (visible) blurActiveElement();
+  }, [visible]);
 
   const closeAndReset = () => {
     setAdding(false);

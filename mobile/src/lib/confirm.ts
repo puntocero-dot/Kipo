@@ -23,3 +23,13 @@ export function confirmAction(title: string, message: string, confirmLabel: stri
     { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: onConfirm },
   ]);
 }
+
+// En web, react-native-web marca la app con aria-hidden al abrir un <Modal>;
+// si el botón que lo abrió sigue enfocado, el navegador avisa en consola
+// ("Blocked aria-hidden on an element because its descendant retained
+// focus"). Quitar el foco antes de mostrar el modal lo evita.
+export function blurActiveElement() {
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+  }
+}
