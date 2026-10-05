@@ -4,6 +4,7 @@ import { computeBudgetUsage, resolveDefaultBudgetId } from '../domain/selectors'
 import { useKipo } from '../domain/store';
 import { colors, fonts, radius, spacing } from '../theme';
 import { BudgetBarRow } from './BudgetBarRow';
+import { SelectField } from './SelectField';
 
 interface Props {
   groupSlug: string | null;
@@ -32,21 +33,16 @@ export function BudgetOverridePicker({ groupSlug, amount, value, onChange }: Pro
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>¿A qué presupuesto afecta?</Text>
-      <View style={styles.chipsRow}>
-        {state.budgets.map((b) => (
-          <Pressable
-            key={b.id}
-            onPress={() => onChange(b.id === defaultBudgetId ? null : b.id)}
-            style={[styles.chip, effectiveBudgetId === b.id && styles.chipActive]}
-          >
-            <Text style={[styles.chipText, effectiveBudgetId === b.id && styles.chipTextActive]}>
-              {b.name}
-              {b.id === defaultBudgetId ? ' (sugerido)' : ''}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <SelectField
+        label="¿A qué presupuesto afecta?"
+        value={effectiveBudgetId}
+        onChange={(id) => onChange(id === defaultBudgetId ? null : id)}
+        options={state.budgets.map((b) => ({
+          value: b.id as string | null,
+          label: b.name,
+          hint: b.id === defaultBudgetId ? 'Sugerido para esta categoría' : undefined,
+        }))}
+      />
 
       {usage && (
         <View style={styles.preview}>

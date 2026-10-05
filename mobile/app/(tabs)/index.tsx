@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BudgetBarRow } from '../../src/components/BudgetBarRow';
 import { DonutChart } from '../../src/components/DonutChart';
 import { MonthlyTrendChart } from '../../src/components/MonthlyTrendChart';
+import { SelectField } from '../../src/components/SelectField';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen, SectionTitle } from '../../src/components/ui';
@@ -88,43 +89,28 @@ export default function DashboardScreen() {
         <View>
           <Text style={styles.greeting}>{state.familyName}</Text>
           {auth && auth.memberships.length > 1 && (
-            <View style={[styles.chipsRow, { marginTop: spacing.xs }]}>
-              {auth.memberships.map((m) => (
-                <Pressable
-                  key={m.familyId}
-                  onPress={() => auth.selectFamily(m.familyId)}
-                  style={[styles.chip, auth.activeFamilyId === m.familyId && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, auth.activeFamilyId === m.familyId && styles.chipTextActive]}>{m.familyName}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <SelectField
+              style={{ marginTop: spacing.sm }}
+              label="Espacio"
+              value={auth.activeFamilyId}
+              onChange={(id) => id && auth.selectFamily(id)}
+              options={auth.memberships.map((m) => ({ value: m.familyId as string | null, label: m.familyName }))}
+            />
           )}
           <Text style={styles.monthLabel}>{wholeYear ? `Balance de ${selectedDate.getFullYear()}` : `Balance de ${MONTH_NAMES[selectedDate.getMonth()]}`}</Text>
         </View>
 
-        {months.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-            {years.map((y) => (
-              <Pressable
-                key={y.key}
-                onPress={() => setMonthKeySel(y.key)}
-                style={[styles.chip, monthKeySel === y.key && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, monthKeySel === y.key && styles.chipTextActive]}>{y.label}</Text>
-              </Pressable>
-            ))}
-            {months.map((m) => (
-              <Pressable
-                key={m.key}
-                onPress={() => setMonthKeySel(m.key)}
-                style={[styles.chip, monthKeySel === m.key && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, monthKeySel === m.key && styles.chipTextActive]}>{m.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
+        <SelectField
+          label="Período"
+          value={monthKeySel}
+          onChange={setMonthKeySel}
+          options={[
+            { header: 'Año completo' },
+            ...years.map((y) => ({ value: y.key, label: y.label })),
+            { header: 'Mes' },
+            ...months.map((m) => ({ value: m.key, label: m.label })),
+          ]}
+        />
 
         <LinearGradient
           colors={[accent, colors.primaryDeep]}

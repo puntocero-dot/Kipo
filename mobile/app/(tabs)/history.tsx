@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SelectField } from '../../src/components/SelectField';
 import { TabScreenGuard } from '../../src/components/TabScreenGuard';
 import { TransactionRow } from '../../src/components/TransactionRow';
 import { Card, EmptyState, Screen } from '../../src/components/ui';
@@ -63,60 +64,40 @@ export default function HistoryScreen() {
         />
       </View>
 
-      {months.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-          <Pressable onPress={() => setMonthFilter(null)} style={[styles.chip, !monthFilter && styles.chipActive]}>
-            <Text style={[styles.chipText, !monthFilter && styles.chipTextActive]}>Todos los meses</Text>
-          </Pressable>
-          {years.map((y) => (
-            <Pressable
-              key={y.key}
-              onPress={() => setMonthFilter(monthFilter === y.key ? null : y.key)}
-              style={[styles.chip, monthFilter === y.key && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, monthFilter === y.key && styles.chipTextActive]}>{y.label}</Text>
-            </Pressable>
-          ))}
-          {months.map((m) => (
-            <Pressable
-              key={m.key}
-              onPress={() => setMonthFilter(monthFilter === m.key ? null : m.key)}
-              style={[styles.chip, monthFilter === m.key && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, monthFilter === m.key && styles.chipTextActive]}>{m.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
+      <SelectField
+        label="Período"
+        value={monthFilter}
+        onChange={setMonthFilter}
+        options={[
+          { value: null, label: 'Todos los meses' },
+          { header: 'Año completo' },
+          ...years.map((y) => ({ value: y.key as string | null, label: y.label })),
+          { header: 'Mes' },
+          ...months.map((m) => ({ value: m.key as string | null, label: m.label })),
+        ]}
+      />
 
-      <View style={styles.chipsRow}>
-        <Pressable onPress={() => setGroupFilter(null)} style={[styles.chip, !groupFilter && styles.chipActive]}>
-          <Text style={[styles.chipText, !groupFilter && styles.chipTextActive]}>Todas</Text>
-        </Pressable>
-        {GROUP_ORDER.map((slug) => (
-          <Pressable
-            key={slug}
-            onPress={() => setGroupFilter(groupFilter === slug ? null : slug)}
-            style={[styles.chip, groupFilter === slug && { backgroundColor: categoryColor(slug) }]}
-          >
-            <Text style={[styles.chipText, groupFilter === slug && styles.chipTextActive]}>{GROUP_LABELS[slug]}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.chipsRow}>
-        <Pressable onPress={() => setMemberFilter(null)} style={[styles.chip, !memberFilter && styles.chipActive]}>
-          <Text style={[styles.chipText, !memberFilter && styles.chipTextActive]}>Toda la familia</Text>
-        </Pressable>
-        {state.members.map((m) => (
-          <Pressable
-            key={m.id}
-            onPress={() => setMemberFilter(memberFilter === m.id ? null : m.id)}
-            style={[styles.chip, memberFilter === m.id && styles.chipActive]}
-          >
-            <Text style={[styles.chipText, memberFilter === m.id && styles.chipTextActive]}>{m.name}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.filterRow}>
+        <SelectField
+          style={{ flex: 1 }}
+          label="Categoría"
+          value={groupFilter}
+          onChange={setGroupFilter}
+          options={[
+            { value: null, label: 'Todas' },
+            ...GROUP_ORDER.map((slug) => ({ value: slug as string | null, label: GROUP_LABELS[slug] })),
+          ]}
+        />
+        <SelectField
+          style={{ flex: 1 }}
+          label="Miembro"
+          value={memberFilter}
+          onChange={setMemberFilter}
+          options={[
+            { value: null, label: 'Toda la familia' },
+            ...state.members.map((m) => ({ value: m.id as string | null, label: m.name })),
+          ]}
+        />
       </View>
 
       {filtered.length === 0 ? (
@@ -165,6 +146,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   search: { flex: 1, minWidth: 0, paddingVertical: 11, fontFamily: fonts.body, fontSize: 14, color: colors.textPrimary, outlineWidth: 0 },
+  filterRow: { flexDirection: 'row', gap: spacing.sm },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   chipsScroll: { flexDirection: 'row', gap: spacing.xs, paddingRight: spacing.lg },
   chip: { paddingHorizontal: spacing.sm, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },

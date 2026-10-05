@@ -5,6 +5,7 @@ import { formatDayLabel, formatTime } from '../domain/selectors';
 import { useKipo } from '../domain/store';
 import type { Transaction } from '../domain/types';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
+import { SelectField } from './SelectField';
 import { BudgetOverridePicker } from './BudgetOverridePicker';
 import { CategoryPickerModal } from './CategoryPickerModal';
 import { Pill } from './ui';
@@ -108,19 +109,15 @@ export function ConfirmCaptureCard({ transaction, onConfirm, onDiscard }: Props)
       </View>
 
       {state.accounts.length > 0 && (
-        <View>
-          <Text style={styles.label}>Medio de pago</Text>
-          <View style={styles.dayChipsRow}>
-            <Pressable onPress={() => setAccountId(null)} style={[styles.dayChip, !accountId && styles.dayChipActive]}>
-              <Text style={[styles.dayChipText, !accountId && styles.dayChipTextActive]}>Sin especificar</Text>
-            </Pressable>
-            {state.accounts.map((a) => (
-              <Pressable key={a.id} onPress={() => setAccountId(a.id)} style={[styles.dayChip, accountId === a.id && styles.dayChipActive]}>
-                <Text style={[styles.dayChipText, accountId === a.id && styles.dayChipTextActive]}>{a.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <SelectField
+          label="Medio de pago"
+          value={accountId}
+          onChange={setAccountId}
+          options={[
+            { value: null, label: 'Sin especificar' },
+            ...state.accounts.map((a) => ({ value: a.id as string | null, label: a.name })),
+          ]}
+        />
       )}
 
       {!isIncome && (
